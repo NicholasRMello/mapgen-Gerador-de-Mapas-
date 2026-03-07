@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MapGen — Procedural Map Generator</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- =============================================
+       HEADER — barra de navegação principal
+       Contém: logo, controles do mapa, status
+  ============================================= -->
+  <header id="app-header">
+    <div class="header-logo">
+      <span class="logo-icon">⬡</span>
+      <h1>MapGen</h1>
+    </div>
+
+    <nav class="header-controls">
+      <!-- Botão para gerar novo mapa -->
+      <button id="btn-generate">Gerar Mapa</button>
+
+      <!-- Botão para limpar o canvas -->
+      <button id="btn-clear">Limpar</button>
+
+      <!-- Seed manual (opcional) -->
+      <input type="text" id="input-seed" placeholder="Seed (opcional)" />
+
+      <!-- Seletor de tamanho do mapa -->
+      <select id="select-size">
+        <option value="small">Pequeno</option>
+        <option value="medium" selected>Médio</option>
+        <option value="large">Grande</option>
+      </select>
+    </nav>
+
+    <div class="header-status">
+      <!-- Exibe informações sobre o mapa atual: seed, nº de salas, etc. -->
+      <span id="status-text">Nenhum mapa gerado.</span>
+    </div>
+  </header>
+
+  <!-- =============================================
+       LAYOUT PRINCIPAL — sidebar + canvas
+  ============================================= -->
+  <main id="app-main">
+
+    <!-- -------------------------------------------
+         SIDEBAR ESQUERDA — painel de assets
+         Aqui ficam as miniaturas dos PNGs disponíveis
+         para o jogador visualizar / selecionar
+    ------------------------------------------- -->
+    <aside id="panel-assets">
+      <h2>Assets</h2>
+
+      <!-- Seção: Salas -->
+      <section class="asset-group" id="group-rooms">
+        <h3>Salas</h3>
+        <!-- 
+          Cada .asset-slot representa um PNG de sala.
+          Adicione <img src="assets/rooms/sala1.png" /> dentro de cada slot.
+          Eles são populados dinamicamente por src/core/assetLoader.js
+        -->
+        <div class="asset-grid" id="slots-rooms">
+          <!-- slots gerados via JS -->
+        </div>
+      </section>
+
+      <!-- Seção: Tiles / Chão -->
+      <section class="asset-group" id="group-tiles">
+        <h3>Tiles</h3>
+        <div class="asset-grid" id="slots-tiles">
+          <!-- slots gerados via JS -->
+        </div>
+      </section>
+
+      <!-- Seção: UI / Ícones especiais -->
+      <section class="asset-group" id="group-ui">
+        <h3>UI / Especiais</h3>
+        <div class="asset-grid" id="slots-ui">
+          <!-- slots gerados via JS -->
+        </div>
+      </section>
+    </aside>
+
+    <!-- -------------------------------------------
+         CANVAS — área de renderização do mapa
+    ------------------------------------------- -->
+    <section id="canvas-wrapper">
+      <canvas id="map-canvas"></canvas>
+
+      <!-- Overlay de loading enquanto gera -->
+      <div id="canvas-overlay" class="hidden">
+        <span>Gerando mapa...</span>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------
+         SIDEBAR DIREITA — propriedades / debug
+    ------------------------------------------- -->
+    <aside id="panel-info">
+      <h2>Detalhes</h2>
+
+      <!-- Exibe propriedades da sala clicada no canvas -->
+      <div id="room-details">
+        <p>Clique em uma sala para ver detalhes.</p>
+      </div>
+
+      <hr />
+
+      <!-- Painel de debug — exibe o estado interno do mapa -->
+      <div id="debug-panel">
+        <h3>Debug</h3>
+        <pre id="debug-output"></pre>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- =============================================
+       SCRIPTS — ordem importa!
+       1. Utilitários
+       2. Core (geração)
+       3. Renderização
+       4. Main (ponto de entrada)
+  ============================================= -->
+  <script src="src/utils/random.js"></script>
+  <script src="src/utils/math.js"></script>
+  <script src="src/core/assetLoader.js"></script>
+  <script src="src/core/mapGenerator.js"></script>
+  <script src="src/core/corridorBuilder.js"></script>
+  <script src="src/render/renderer.js"></script>
+  <script src="src/render/camera.js"></script>
+  <script src="src/main.js"></script>
+
+</body>
+</html>

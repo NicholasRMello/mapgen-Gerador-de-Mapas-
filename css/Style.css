@@ -1,0 +1,288 @@
+/* ==============================================
+   VARIÁVEIS GLOBAIS — tema e paleta
+   Edite aqui para mudar o visual do projeto
+   ============================================= */
+:root {
+  --color-bg:         #0e0f14;
+  --color-surface:    #16181f;
+  --color-border:     #2a2d3a;
+  --color-accent:     #5c6bff;
+  --color-accent-dim: #3a4acc;
+  --color-text:       #d4d6e8;
+  --color-muted:      #6b6f8a;
+  --color-danger:     #ff4f6b;
+
+  --header-height: 64px;
+  --sidebar-width: 200px;
+  --radius:        8px;
+  --font-main:     'Courier New', monospace; /* troque pelo que preferir */
+}
+
+/* ==============================================
+   RESET BÁSICO
+   ============================================= */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-main);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ==============================================
+   HEADER
+   ============================================= */
+#app-header {
+  height: var(--header-height);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 24px;
+  flex-shrink: 0;
+
+  /* TODO: adicione efeito de glassmorphism se quiser */
+}
+
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-logo h1 {
+  font-size: 1.3rem;
+  letter-spacing: 4px;
+  color: var(--color-accent);
+  text-transform: uppercase;
+}
+
+.logo-icon {
+  font-size: 1.6rem;
+  color: var(--color-accent);
+
+  /* TODO: adicione animação de rotação ou pulse */
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.header-controls button {
+  padding: 8px 18px;
+  border: 1px solid var(--color-accent);
+  background: transparent;
+  color: var(--color-accent);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-main);
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  transition: background 0.2s, color 0.2s;
+
+  /* TODO: adicione efeito hover customizado */
+}
+
+.header-controls button:hover {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.header-controls input,
+.header-controls select {
+  padding: 7px 12px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  border-radius: var(--radius);
+  font-family: var(--font-main);
+  font-size: 0.85rem;
+
+  /* TODO: adicione focus ring estilizado */
+}
+
+.header-status {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+/* ==============================================
+   LAYOUT PRINCIPAL
+   ============================================= */
+#app-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ==============================================
+   SIDEBARS
+   ============================================= */
+#panel-assets,
+#panel-info {
+  width: var(--sidebar-width);
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  overflow-y: auto;
+  padding: 16px 12px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#panel-info {
+  border-right: none;
+  border-left: 1px solid var(--color-border);
+}
+
+#panel-assets h2,
+#panel-info h2 {
+  font-size: 0.7rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.asset-group h3 {
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 4px;
+}
+
+.asset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+/* Cada slot de asset — receberá uma <img> dentro */
+.asset-slot {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s;
+
+  /* TODO: adicione efeito de seleção (selected state) */
+}
+
+.asset-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated; /* importante para pixel art! */
+}
+
+.asset-slot:hover {
+  border-color: var(--color-accent);
+}
+
+.asset-slot.selected {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-dim);
+}
+
+/* ==============================================
+   CANVAS
+   ============================================= */
+#canvas-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--color-bg);
+
+  /* TODO: adicione grid de fundo (pattern SVG ou CSS) para guiar o olho */
+}
+
+#map-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+
+  /* TODO: adicione cursor crosshair ou grab ao mover a câmera */
+}
+
+/* Overlay de loading */
+#canvas-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(14, 15, 20, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  letter-spacing: 3px;
+  color: var(--color-accent);
+}
+
+#canvas-overlay.hidden {
+  display: none;
+}
+
+/* ==============================================
+   PAINEL DE INFO / DEBUG
+   ============================================= */
+#room-details p {
+  font-size: 0.78rem;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+
+#debug-panel h3 {
+  font-size: 0.7rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-bottom: 8px;
+}
+
+#debug-output {
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.5;
+
+  /* TODO: adicione scroll interno se o output crescer muito */
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+}
+
+/* ==============================================
+   SCROLLBAR CUSTOMIZADA (WebKit)
+   ============================================= */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
