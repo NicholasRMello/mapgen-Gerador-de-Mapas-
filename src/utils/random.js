@@ -25,6 +25,8 @@ const Random = (() => {
     //       (ex.: hash simples da string)
 
     // TODO: inicializar _state com o valor numérico do seed
+
+    _state = typeof value === 'string' ? hashString(value) : value;
   }
 
   // ---------------------------------------------------
@@ -37,6 +39,15 @@ const Random = (() => {
   function next() {
     // TODO: implementar step do algoritmo escolhido (ex. Mulberry32)
     //       e retornar valor normalizado entre 0 e 1
+    function mulberry32(a) {
+        return function() {
+            var t = a += 0x6D2B79F5;
+            t = Math.imul(t ^ t >>> 15, t | 1);
+            t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+            return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        }
+    }
+
   }
 
   // ---------------------------------------------------
