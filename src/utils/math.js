@@ -16,6 +16,8 @@ const MathUtils = (() => {
   // ---------------------------------------------------
   function distance(a, b) {
     // TODO: Math.sqrt((b.x - a.x)² + (b.y - a.y)²)
+
+    return Math.sqrt(Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2));
   }
 
   // ---------------------------------------------------
@@ -27,6 +29,8 @@ const MathUtils = (() => {
   // ---------------------------------------------------
   function rectCenter(rect) {
     // TODO: retornar { x: rect.x + rect.width/2, y: rect.y + rect.height/2 }
+
+    return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
   }
 
   // ---------------------------------------------------
@@ -41,6 +45,11 @@ const MathUtils = (() => {
   function rectsOverlap(a, b, padding = 0) {
     // TODO: comparar bordas considerando padding
     //   a.x + a.width  + padding > b.x  && etc.
+
+    return (a.x + a.width + padding > b.x &&
+            a.x < b.x + b.width + padding &&
+            a.y + a.height + padding > b.y &&
+            a.y < b.y + b.height + padding);
   }
 
   // ---------------------------------------------------
@@ -51,6 +60,8 @@ const MathUtils = (() => {
   // ---------------------------------------------------
   function clamp(value, min, max) {
     // TODO: Math.min(Math.max(value, min), max)
+    return Math.min(Math.max(value, min), max);
+
   }
 
   // ---------------------------------------------------
@@ -62,6 +73,7 @@ const MathUtils = (() => {
   // ---------------------------------------------------
   function lerp(a, b, t) {
     // TODO: a + (b - a) * t
+    return a + (b - a) * t;
   }
 
   // ---------------------------------------------------
@@ -75,6 +87,10 @@ const MathUtils = (() => {
   // ---------------------------------------------------
   function pointInRect(point, rect) {
     // TODO: checar se point.x e point.y estão dentro de rect
+    return (point.x >= rect.x &&
+            point.x <= rect.x + rect.width &&
+            point.y >= rect.y &&
+            point.y <= rect.y + rect.height);
   }
 
   // ---------------------------------------------------
