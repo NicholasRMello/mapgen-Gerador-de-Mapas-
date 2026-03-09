@@ -14,6 +14,28 @@ const Random = (() => {
 
   let _state = 0;  // estado interno do gerador
 
+  // algoritmo mulberry32 para gerar números pseudoaleatórios a partir de um seed.
+  function mulberry32(a) {
+        return function() {
+            var t = a += 0x6D2B79F5;
+            t = Math.imul(t ^ t >>> 15, t | 1);
+            t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+            return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        }
+    }
+
+  // função simples para converter string em número (hash)
+  function hashString(str) {
+    var len = str.length;
+    var hash = 5381;
+    for (var idx = 0; idx < len; ++idx) {
+      hash = 33 * hash + str.charCodeAt(idx);
+    }
+    return hash;
+  }
+
+  
+
   // ---------------------------------------------------
   // seed(value)
   // Define o seed antes de gerar um mapa.
@@ -27,6 +49,10 @@ const Random = (() => {
     // TODO: inicializar _state com o valor numérico do seed
 
     _state = typeof value === 'string' ? hashString(value) : value;
+    _state = _state >>> 0; // garantir que seja um inteiro positivo de 32 bits
+    _state = mulberry32(_state); // guardar a função dentro de _state para gerar números pseudoaleatórios
+    
+  
   }
 
   // ---------------------------------------------------
@@ -39,14 +65,7 @@ const Random = (() => {
   function next() {
     // TODO: implementar step do algoritmo escolhido (ex. Mulberry32)
     //       e retornar valor normalizado entre 0 e 1
-    function mulberry32(a) {
-        return function() {
-            var t = a += 0x6D2B79F5;
-            t = Math.imul(t ^ t >>> 15, t | 1);
-            t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-            return ((t ^ t >>> 14) >>> 0) / 4294967296;
-        }
-    }
+    return _state();
 
   }
 
@@ -58,6 +77,7 @@ const Random = (() => {
   // ---------------------------------------------------
   function int(min, max) {
     // TODO: usar next() e mapear para [min, max]
+    return Math.floor(next() * (max - min + 1)) + min;
   }
 
   // ---------------------------------------------------
@@ -68,6 +88,7 @@ const Random = (() => {
   // ---------------------------------------------------
   function float(min, max) {
     // TODO: usar next() e mapear para [min, max)
+    return min + (max - min) * next();
   }
 
   // ---------------------------------------------------
@@ -78,6 +99,12 @@ const Random = (() => {
   // ---------------------------------------------------
   function pick(array) {
     // TODO: gerar índice aleatório e retornar array[índice]
+
+    if (array.length === 0) {
+      return undefined; // ou lançar erro, dependendo do comportamento desejado
+    }
+    return array[int(0, array.length - 1)];
+
   }
 
   // ---------------------------------------------------
@@ -88,6 +115,12 @@ const Random = (() => {
   // ---------------------------------------------------
   function shuffle(array) {
     // TODO: implementar Fisher-Yates usando next()
+
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = int(0, i);
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
   }
 
   // ---------------------------------------------------
@@ -100,6 +133,11 @@ const Random = (() => {
   function generateSeedString() {
     // TODO: combinar palavra aleatória + número aleatório
     //       usando Math.random() (não precisa ser seedável aqui)
+
+    const adjectives = ['CAVE', 'DARK', 'MYSTIC', 'ANCIENT', 'HIDDEN'];
+    const noun = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const number = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return `${noun}-${number}`;
   }
 
   // ---------------------------------------------------
