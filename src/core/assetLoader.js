@@ -15,13 +15,12 @@ const AssetLoader = (() => {
 
   // ---------------------------------------------------
   // ASSET_MANIFEST
-  // Liste aqui todos os PNGs que quer usar no mapa.
+  // Lista de todos os PNGs usados no mapa.
   // 'key'   → identificador usado pelo MapGenerator
   // 'path'  → caminho relativo a partir de index.html
   // 'group' → 'rooms' | 'tiles' | 'ui'
   // ---------------------------------------------------
   const ASSET_MANIFEST = [
-    // Exemplos — substitua pelos seus arquivos reais:
     { key: 'room_cave',    path: 'assets/rooms/cave.png',    group: 'rooms' },
     { key: 'room_dungeon', path: 'assets/rooms/dungeon.png', group: 'rooms' },
     { key: 'tile_floor',   path: 'assets/tiles/floor.png',   group: 'tiles' },
@@ -30,78 +29,142 @@ const AssetLoader = (() => {
     { key: 'icon_boss',    path: 'assets/ui/boss.png',       group: 'ui'    },
   ];
 
-  // Cache interno: { key → HTMLImageElement }
+  // Cache interno: mapeia key → HTMLImageElement carregado
   const _cache = {};
 
   // ---------------------------------------------------
   // load()
   // Carrega todos os assets do ASSET_MANIFEST em paralelo.
+  // Cada PNG é carregado via new Image() com promisificação.
+  // Imagens que falharem (arquivo não encontrado) são ignoradas
+  // silenciosamente para não travar a aplicação.
   //
-  // @returns {Promise<object>}  resolves com o cache completo
+  // @returns {Promise<object>}  resolve com o cache completo
   // ---------------------------------------------------
   function load() {
-    // TODO: para cada item do ASSET_MANIFEST, criar uma Promise
-    //       que cria um new Image(), seta src e resolve no onload
+    // Cria uma Promise para cada item do manifesto
+    const promises = ASSET_MANIFEST.map(item => {
+      return new Promise(resolve => {
+        const img = new Image();
 
-    // TODO: usar Promise.all() para aguardar todos os carregamentos
+        // Ao concluir o carregamento com sucesso, armazena no cache e resolve
+        img.onload = () => {
+          _cache[item.key] = img;
+          resolve();
+        };
 
-    // TODO: popular _cache com { key: imageElement }
+        // Em caso de erro (arquivo não existe), resolve sem armazenar
+        // para não bloquear Promise.all
+        img.onerror = () => {
+          console.warn(`[AssetLoader] Não foi possível carregar: ${item.path}`);
+          resolve();
+        };
 
-    // TODO: ao terminar, chamar _populateSidebar()
+        // Inicia o carregamento definindo o src
+        img.src = item.path;
+      });
+    });
 
-    // TODO: retornar Promise que resolve com _cache
+    // Aguarda todos os carregamentos (com ou sem erro) e popula a sidebar
+    return Promise.all(promises).then(() => {
+      _populateSidebar();
+      return _cache;
+    });
   }
 
   // ---------------------------------------------------
   // get(key)
-  // Retorna o HTMLImageElement pelo key do manifest.
+  // Retorna o HTMLImageElement pelo key do manifesto.
+  // Retorna null e loga aviso se a key não existir.
   //
   // @param {string} key
   // @returns {HTMLImageElement | null}
   // ---------------------------------------------------
   function get(key) {
-    // TODO: buscar e retornar _cache[key]
+    // Busca no cache pelo identificador
+    const img = _cache[key];
 
-    // TODO: logar aviso se key não encontrado
+    // Alerta no console se a imagem não foi encontrada ou falhou ao carregar
+    if (!img) {
+      console.warn(`[AssetLoader] Asset não encontrado no cache: "${key}"`);
+      return null;
+    }
+
+    return img;
   }
 
   // ---------------------------------------------------
   // getByGroup(group)
-  // Retorna todos os assets de um grupo específico.
+  // Retorna todos os assets carregados de um grupo específico.
+  // Útil para listar todos os tipos de sala disponíveis.
   //
   // @param {string} group  'rooms' | 'tiles' | 'ui'
-  // @returns {{ key, img }[]}
+  // @returns {{ key: string, img: HTMLImageElement }[]}
   // ---------------------------------------------------
   function getByGroup(group) {
-    // TODO: filtrar ASSET_MANIFEST pelo group
-
-    // TODO: retornar array de { key, img: _cache[key] }
+    // Filtra o manifesto pelo grupo e retorna apenas os que carregaram com sucesso
+    return ASSET_MANIFEST
+      .filter(item => item.group === group)
+      .filter(item => _cache[item.key])           // só os que estão no cache
+      .map(item => ({ key: item.key, img: _cache[item.key] }));
   }
 
   // ---------------------------------------------------
   // getKeys(group)
-  // Retorna apenas as keys de um grupo.
-  // Usado pelo MapGenerator para sortear assets aleatórios.
+  // Retorna apenas as keys de um grupo específico.
+  // Usado pelo MapGenerator para sortear assets aleatórios
+  // ao atribuir um visual para cada sala gerada.
   //
   // @param {string} group
   // @returns {string[]}
   // ---------------------------------------------------
   function getKeys(group) {
-    // TODO: filtrar ASSET_MANIFEST e retornar só as keys do grupo
+    // Filtra pelo grupo e retorna somente as keys dos assets carregados
+    return ASSET_MANIFEST
+      .filter(item => item.group === group && _cache[item.key])
+      .map(item => item.key);
   }
 
   // ---------------------------------------------------
   // _populateSidebar()
-  // Cria os .asset-slot com <img> dentro das grids do HTML
-  // para exibir as miniaturas dos PNGs carregados.
+  // Cria os elementos .asset-slot com <img> dentro das
+  // grids do HTML para exibir as miniaturas dos PNGs carregados.
+  // Chamada automaticamente ao final de load().
   // ---------------------------------------------------
   function _populateSidebar() {
-    // TODO: para cada group ('rooms', 'tiles', 'ui'):
-    //   - obter o elemento #slots-{group} do DOM
-    //   - para cada asset do grupo, criar um div.asset-slot
-    //   - criar <img> com src = asset.path e colocar dentro do slot
-    //   - adicionar evento de clique para seleção (opcional)
-    //   - appendar o slot na grid
+    // Itera sobre os três grupos de assets
+    ['rooms', 'tiles', 'ui'].forEach(group => {
+      // Localiza a grid correspondente no HTML (ex.: #slots-rooms)
+      const grid = document.getElementById(`slots-${group}`);
+      if (!grid) return;
+
+      // Limpa slots antigos caso load() seja chamada novamente
+      grid.innerHTML = '';
+
+      // Obtém todos os assets carregados do grupo atual
+      const assets = getByGroup(group);
+
+      assets.forEach(({ key, img }) => {
+        // Cria o contêiner do slot
+        const slot = document.createElement('div');
+        slot.className  = 'asset-slot';
+        slot.title      = key;            // tooltip com o nome da chave
+
+        // Cria a imagem em miniatura
+        const thumb = document.createElement('img');
+        thumb.src = img.src;
+        thumb.alt = key;
+
+        // Adiciona a legenda com a key abaixo da imagem
+        const label = document.createElement('span');
+        label.textContent = key;
+
+        // Monta o slot e insere na grid
+        slot.appendChild(thumb);
+        slot.appendChild(label);
+        grid.appendChild(slot);
+      });
+    });
   }
 
   // ---------------------------------------------------

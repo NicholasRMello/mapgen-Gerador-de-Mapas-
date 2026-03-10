@@ -48,41 +48,38 @@
   <main id="app-main">
 
     <!-- -------------------------------------------
-         SIDEBAR ESQUERDA — painel de assets
-         Aqui ficam as miniaturas dos PNGs disponíveis
-         para o jogador visualizar / selecionar
+         SIDEBAR ESQUERDA — assets do usuário
+         O usuário arrasta imagens do computador para
+         o drop-zone; cada imagem recebe um tipo de sala.
     ------------------------------------------- -->
     <aside id="panel-assets">
-      <h2>Assets</h2>
 
-      <!-- Seção: Salas -->
-      <section class="asset-group" id="group-rooms">
-        <h3>Salas</h3>
-        <!-- 
-          Cada .asset-slot representa um PNG de sala.
-          Adicione <img src="assets/rooms/sala1.png" /> dentro de cada slot.
-          Eles são populados dinamicamente por src/core/assetLoader.js
-        -->
-        <div class="asset-grid" id="slots-rooms">
-          <!-- slots gerados via JS -->
+      <!-- Seção: Imagens de sala -->
+      <div class="sidebar-section">
+        <button class="sidebar-section-header active" data-section="section-assets">
+          <span class="section-arrow">&#9660;</span> Imagens
+        </button>
+        <div id="section-assets" class="sidebar-section-content">
+          <div id="drop-zone">
+            <span class="drop-icon">+</span>
+            <span>Arraste imagens aqui<br/>ou clique para selecionar</span>
+            <input type="file" id="file-input" accept="image/*" multiple hidden />
+          </div>
+          <div id="user-asset-list"></div>
         </div>
-      </section>
+      </div>
 
-      <!-- Seção: Tiles / Chão -->
-      <section class="asset-group" id="group-tiles">
-        <h3>Tiles</h3>
-        <div class="asset-grid" id="slots-tiles">
-          <!-- slots gerados via JS -->
+      <!-- Seção: Pinos de anotação -->
+      <div class="sidebar-section">
+        <button class="sidebar-section-header" data-section="section-pins">
+          <span class="section-arrow">&#9654;</span> Pinos
+        </button>
+        <div id="section-pins" class="sidebar-section-content collapsed">
+          <button id="btn-pin-mode">📍 Adicionar Pino</button>
+          <div id="pin-list"></div>
         </div>
-      </section>
+      </div>
 
-      <!-- Seção: UI / Ícones especiais -->
-      <section class="asset-group" id="group-ui">
-        <h3>UI / Especiais</h3>
-        <div class="asset-grid" id="slots-ui">
-          <!-- slots gerados via JS -->
-        </div>
-      </section>
     </aside>
 
     <!-- -------------------------------------------
@@ -129,11 +126,27 @@
   <script src="src/utils/random.js"></script>
   <script src="src/utils/math.js"></script>
   <script src="src/core/assetLoader.js"></script>
+  <script src="src/core/pinManager.js"></script>
+  <script src="src/core/userAssets.js"></script>
   <script src="src/core/mapGenerator.js"></script>
   <script src="src/core/corridorBuilder.js"></script>
   <script src="src/render/renderer.js"></script>
   <script src="src/render/camera.js"></script>
   <script src="src/main.js"></script>
+  <!-- =============================================
+       MODAL — preview ampliado de imagem de asset
+       Clicando no thumbnail de um .ua-card, o usuário
+       vê a imagem em tamanho grande.
+  ============================================= -->
+  <div id="img-preview-modal" class="hidden">
+    <!-- Fundo escuro — fechar ao clicar -->
+    <div id="img-preview-backdrop"></div>
+    <!-- Container da imagem -->
+    <div id="img-preview-container">
+      <button id="img-preview-close">✕</button>
+      <img id="img-preview-img" src="" alt="Preview da imagem" />
+    </div>
+  </div>
 
 </body>
 </html>

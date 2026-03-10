@@ -250,6 +250,31 @@ body {
   line-height: 1.6;
 }
 
+/* Tabela de propriedades da sala selecionada */
+#room-details table {
+  width: 100%;
+  font-size: 0.75rem;
+  border-collapse: collapse;
+}
+
+#room-details td {
+  padding: 4px 2px;
+  vertical-align: top;
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border);
+}
+
+#room-details td:first-child {
+  color: var(--color-muted);
+  padding-right: 8px;
+  white-space: nowrap;
+}
+
+/* Label de texto abaixo de cada miniatura de asset */
+.asset-slot span {
+  display: none; /* esconde o label: pouco espaço na sidebar */
+}
+
 #debug-panel h3 {
   font-size: 0.7rem;
   letter-spacing: 2px;
@@ -285,4 +310,605 @@ hr {
 ::-webkit-scrollbar-thumb {
   background: var(--color-border);
   border-radius: 4px;
+}
+
+/* ==============================================
+   DROP ZONE — área de upload de imagens do usuário
+   ============================================= */
+
+/* Contêiner principal do drop zone na sidebar esquerda */
+#drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  /* Borda tracejada indica área interativa */
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius);
+  padding: 18px 10px;
+
+  cursor: pointer;
+  text-align: center;
+
+  font-size: 0.72rem;
+  color: var(--color-muted);
+  line-height: 1.5;
+
+  /* Transição suave ao passar o mouse ou arrastar arquivo */
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+
+  /* Evita que o texto seja selecionado durante o drag */
+  user-select: none;
+}
+
+/* Ícone "+" grande centralizado no drop zone */
+#drop-zone .drop-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+  color: var(--color-accent);
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+/* Hover com mouse (sem arrastar) */
+#drop-zone:hover {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+#drop-zone:hover .drop-icon {
+  opacity: 1;
+}
+
+/* Estado ativo: arquivo está sendo arrastado sobre o drop zone */
+#drop-zone.drag-over {
+  border-color: var(--color-accent);
+  border-style: solid;
+  background: rgba(92, 107, 255, 0.08);
+  color: var(--color-text);
+}
+
+#drop-zone.drag-over .drop-icon {
+  opacity: 1;
+}
+
+/* ==============================================
+   USER ASSET LIST — lista de imagens carregadas
+   ============================================= */
+
+/* Contêiner da lista de cards de imagem */
+#user-asset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  /* Scroll para listas longas */
+  overflow-y: auto;
+  max-height: calc(100vh - 220px);
+}
+
+/* Card individual de cada imagem carregada */
+/* Contém: miniatura | coluna com nome + tipo | botão remover */
+.ua-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 6px;
+
+  /* Transição ao hover para destacar o card */
+  transition: border-color 0.15s;
+}
+
+.ua-card:hover {
+  border-color: var(--color-accent-dim);
+}
+
+/* Miniatura da imagem dentro do card */
+.ua-card-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;      /* não comprime a miniatura */
+
+  /* Renderização pixelada para pixel art */
+  image-rendering: pixelated;
+}
+
+/* Coluna com nome do arquivo e seletor de tipo */
+.ua-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;        /* permite truncar o texto no flex */
+}
+
+/* Nome do arquivo — truncado se for longo demais */
+.ua-card-name {
+  font-size: 0.68rem;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Seletor de tipo da sala para esta imagem */
+.ua-type-select {
+  font-family: var(--font-main);
+  font-size: 0.65rem;
+
+  background: var(--color-surface);
+  color: var(--color-accent);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 2px 4px;
+
+  /* Remove a seta padrão do SO — usamos a aparência customizada */
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+
+  transition: border-color 0.15s;
+}
+
+.ua-type-select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+/* Botão de remover (✕) no canto direito do card */
+.ua-remove {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+
+  transition: color 0.15s, background 0.15s;
+}
+
+.ua-remove:hover {
+  color: var(--color-danger);
+  background: rgba(255, 79, 107, 0.1);
+}
+
+/* Mensagem exibida quando não há assets carregados */
+.ua-empty-hint {
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  text-align: center;
+  padding: 8px 0;
+  line-height: 1.5;
+}
+
+/* ==============================================
+   SIDEBAR SECTIONS — accordion vertical (submenus)
+   ============================================= */
+
+/* Contêiner de cada seção retrátil */
+.sidebar-section {
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Botão-cabeçalho que colapsa/expande a seção */
+.sidebar-section-header {
+  width: 100%;
+  padding: 10px 4px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  color: var(--color-muted);
+  font-family: var(--font-main);
+  font-size: 0.7rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Seção expandida / ativa */
+.sidebar-section-header.active {
+  color: var(--color-accent);
+}
+
+.sidebar-section-header:hover {
+  color: var(--color-text);
+  background: rgba(92, 107, 255, 0.05);
+}
+
+/* Seta indicadora de estado (▶ / ▼) */
+.section-arrow {
+  font-size: 0.55rem;
+  display: inline-block;
+  transition: transform 0.2s;
+}
+
+/* Conteúdo da seção (drop-zone, listas, etc.) */
+.sidebar-section-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 0 10px 0;
+}
+
+/* Conteúdo colapsado — escondido */
+.sidebar-section-content.collapsed {
+  display: none;
+}
+
+/* ==============================================
+   BOTÃO DE MODO PINO — toggle para inserir pinos
+   ============================================= */
+
+#btn-pin-mode {
+  width: 100%;
+  padding: 7px 10px;
+  background: transparent;
+  border: 1px dashed var(--color-accent);
+  border-radius: var(--radius);
+  color: var(--color-accent);
+  font-family: var(--font-main);
+  font-size: 0.72rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-style 0.2s;
+}
+
+/* Estado ativo: modo pino ligado */
+#btn-pin-mode.active {
+  background: var(--color-accent);
+  border-style: solid;
+  color: #fff;
+}
+
+#btn-pin-mode:hover:not(.active) {
+  background: rgba(92, 107, 255, 0.1);
+}
+
+/* ==============================================
+   PIN LIST — lista de pinos na sidebar
+   ============================================= */
+
+/* Contêiner que lista os cards de pinos */
+#pin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  max-height: calc(100vh - 200px);
+}
+
+/* Card individual de cada pino */
+.pin-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 7px 8px;
+  transition: border-color 0.15s;
+}
+
+.pin-card:hover {
+  border-color: var(--color-accent-dim);
+}
+
+/* Destaque temporário quando o usuário clica no pino no canvas */
+.pin-card.selected {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-dim);
+}
+
+/* Pino marcado como concluído — borda e indicador verdes */
+.pin-card.completed {
+  border-color: #00cc66;
+}
+
+.pin-card.completed .pin-card-header > span:first-child::after {
+  content: ' ✓';
+  color: #00cc66;
+}
+
+/* Linha superior: ícone + rótulo/input + botões de ação */
+.pin-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Ícone do pino na header */
+.pin-card-header > span {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+/* ── MODO VISUALIZAÇÃO ── */
+
+/* Rótulo do pino em texto (somente leitura) */
+.pin-label-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.72rem;
+  color: var(--color-text);
+  font-family: var(--font-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Texto da anotação (somente leitura) */
+.pin-note-preview {
+  font-size: 0.68rem;
+  color: var(--color-muted);
+  font-family: var(--font-main);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 60px;
+  overflow-y: auto;
+}
+
+/* Botão editar (✏️) */
+.pin-edit-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.pin-edit-btn:hover {
+  background: rgba(92, 107, 255, 0.15);
+}
+
+/* Botão excluir / lixeira (🗑️) no modo visualização */
+.pin-trash-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.pin-trash-btn:hover {
+  background: rgba(255, 79, 107, 0.15);
+}
+
+/* ── MODO EDIÇÃO ── */
+
+/* Input editável do rótulo do pino */
+.pin-label-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-family: var(--font-main);
+  font-size: 0.72rem;
+  padding: 1px 2px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.pin-label-input:focus {
+  border-bottom-color: var(--color-accent);
+}
+
+/* Textarea para a nota/anotação do pino (editável) */
+.pin-note-input {
+  width: 100%;
+  min-height: 48px;
+  resize: vertical;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-muted);
+  font-family: var(--font-main);
+  font-size: 0.68rem;
+  padding: 4px 6px;
+  line-height: 1.4;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.pin-note-input:focus {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+/* Botão confirmar edição (✓) — salva o texto */
+.pin-confirm-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: #00cc66;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-weight: bold;
+  transition: color 0.15s, background 0.15s;
+}
+
+.pin-confirm-btn:hover {
+  background: rgba(0, 204, 102, 0.15);
+}
+
+/* Botão descartar edição (🗑️) — cancela alterações */
+.pin-discard-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.pin-discard-btn:hover {
+  background: rgba(255, 79, 107, 0.15);
+}
+
+/* Botão de remover pino — antigo, mantido como fallback */
+.pin-delete {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.pin-delete:hover {
+  color: var(--color-danger);
+  background: rgba(255, 79, 107, 0.1);
+}
+
+/* Botão de status no painel de detalhes da direita */
+.pin-status-btn {
+  margin-top: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-accent);
+  background: transparent;
+  color: var(--color-accent);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-main);
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.pin-status-btn:hover {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+/* Quando o pino já está concluído, o botão exibe em verde */
+.pin-status-btn.completed {
+  border-color: #00cc66;
+  color: #00cc66;
+}
+
+.pin-status-btn.completed:hover {
+  background: #00cc66;
+  color: #fff;
+}
+
+/* Mensagem exibida quando não há pinos */
+.pin-empty-hint {
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  text-align: center;
+  padding: 8px 0;
+  line-height: 1.5;
+}
+
+/* ==============================================
+   CURSOR PIN MODE — crosshair durante inserção
+   ============================================= */
+
+/* Quando o modo pino está ativo, o canvas exibe crosshair */
+#map-canvas.pin-mode {
+  cursor: crosshair;
+}
+
+/* ==============================================
+   MODAL DE PREVIEW DE IMAGEM
+   Exibido ao clicar em um thumbnail na sidebar
+   ============================================= */
+
+/* Overlay fullscreen — cobre toda a viewport */
+#img-preview-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Estado oculto do modal */
+#img-preview-modal.hidden {
+  display: none;
+}
+
+/* Fundo escuro semi-transparente que fecha o modal ao clicar */
+#img-preview-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  cursor: pointer;
+}
+
+/* Container da imagem — fica sobre o backdrop */
+#img-preview-container {
+  position: relative;
+  z-index: 1001;
+  max-width: 80vw;
+  max-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Imagem ampliada */
+#img-preview-img {
+  max-width: 80vw;
+  max-height: 80vh;
+  object-fit: contain;
+  border: 2px solid var(--color-accent);
+  border-radius: var(--radius);
+  /* Preserva a aparência de pixel art */
+  image-rendering: pixelated;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7);
+}
+
+/* Botão de fechar no canto superior direito */
+#img-preview-close {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--color-accent);
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+#img-preview-close:hover {
+  background: var(--color-accent);
+  color: #fff;
 }
