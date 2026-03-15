@@ -1,46 +1,46 @@
 /**
- * userAssets.js — Gerenciamento de imagens enviadas pelo usuário
+ * userAssets.js — User-uploaded image management
  *
- * Responsabilidades:
- *  - Receber arquivos de imagem via drag-and-drop ou seleção de arquivo
- *  - Manter um cache local (em memória) com as imagens carregadas
- *  - Permitir que o usuário defina o tipo de cada imagem
- *    (qualquer | normal | início | final | boss)
- *  - Fornecer imagens ao MapGenerator ordenadas por tipo de sala
+ * Responsibilities:
+ *  - Receive image files via drag-and-drop or file selection
+ *  - Maintain a local (in-memory) cache of loaded images
+ *  - Allow the user to set the type of each image
+ *    (any | normal | start | end | boss)
+ *  - Provide images to the MapGenerator sorted by room type
  *
- * Estrutura de um UserAsset:
+ * UserAsset structure:
  * {
- *   id:      number,   // identificador único auto-incrementado
- *   name:    string,   // nome original do arquivo
- *   dataURL: string,   // base64 da imagem (para persistência e exibição)
+ *   id:      number,   // unique auto-incremented identifier
+ *   name:    string,   // original file name
+ *   dataURL: string,   // base64-encoded image (for persistence and display)
  *   img:     HTMLImageElement,
  *   type:    string,   // 'any' | 'normal' | 'start' | 'end' | 'boss'
  * }
  *
- * Cadeia de fallback no MapGenerator:
- *   getByType(roomType) → exact match → 'any' → [] (gerador usa fallback colorido)
+ * Fallback chain in MapGenerator:
+ *   getByType(roomType) → exact match → 'any' → [] (generator uses colored fallback)
  */
 
 const UserAssets = (() => {
 
-  // Array interno de assets do usuário
-  // Modificado apenas pelas funções do módulo
+  // Internal array of user assets
+  // Modified only by this module's functions
   let _assets = [];
 
-  // Contador auto-incrementado para IDs únicos
+  // Auto-incremented counter for unique IDs
   let _nextId = 0;
 
-  // Função de callback chamada sempre que o estado de _assets mudar
-  // Usada pelo main.js para re-renderizar a sidebar
+  // Callback function called whenever the _assets state changes
+  // Used by main.js to re-render the sidebar
   let _onChangeCb = null;
 
   // ---------------------------------------------------
   // init(onChangeCallback)
-  // Registra a função de callback que será chamada
-  // sempre que assets forem adicionados, removidos ou
-  // tiverem seu tipo alterado.
+  // Registers the callback function that will be called
+  // whenever assets are added, removed, or have their
+  // type changed.
   //
-  // @param {Function} onChangeCallback  recebe o array atual de assets
+  // @param {Function} onChangeCallback  receives the current asset array
   // ---------------------------------------------------
   function init(onChangeCallback) {
     _onChangeCb = typeof onChangeCallback === 'function'
@@ -50,63 +50,63 @@ const UserAssets = (() => {
 
   // ---------------------------------------------------
   // add(file)
-  // Lê um arquivo de imagem via FileReader, cria um
-  // HTMLImageElement e armazena no cache interno.
+  // Reads an image file via FileReader, creates an
+  // HTMLImageElement, and stores it in the internal cache.
   //
-  // O tipo padrão é 'any': a imagem pode ser usada para
-  // qualquer tipo de sala até o usuário mudar.
+  // The default type is 'any': the image can be used for
+  // any room type until the user changes it.
   //
-  // @param {File} file  arquivo de imagem (image/*)
-  // @returns {Promise<UserAsset>}  resolve com o asset criado
+  // @param {File} file  image file (image/*)
+  // @returns {Promise<UserAsset>}  resolves with the created asset
   // ---------------------------------------------------
   function add(file) {
     return new Promise((resolve, reject) => {
 
-      // Rejeita arquivos que não sejam imagens
+      // Reject files that are not images
       if (!file.type.startsWith('image/')) {
-        console.warn(`[UserAssets] Arquivo ignorado (não é imagem): "${file.name}"`);
-        reject(new Error(`"${file.name}" não é uma imagem.`));
+        console.warn(`[UserAssets] File ignored (not an image): "${file.name}"`);
+        reject(new Error(I18n.t('error.notImage', file.name)));
         return;
       }
 
-      // Lê o arquivo como Data URL (base64) para exibição na sidebar
+      // Read the file as a Data URL (base64) for display in the sidebar
       const reader = new FileReader();
 
       reader.onload = (e) => {
         const dataURL = e.target.result;
 
-        // Cria o elemento de imagem para uso no canvas (drawImage)
+        // Create the image element for use on the canvas (drawImage)
         const img = new Image();
 
         img.onload = () => {
-          // Monta o objeto de asset com todas as propriedades necessárias
+          // Build the asset object with all required properties
           const asset = {
             id:      _nextId++,
             name:    file.name,
             dataURL,
             img,
-            type:    'any',   // tipo padrão: pode ser usado para qualquer sala
+            type:    'any',   // default type: can be used for any room
           };
 
           _assets.push(asset);
 
-          // Notifica o main.js para re-renderizar a sidebar
+          // Notify main.js to re-render the sidebar
           _notify();
 
           resolve(asset);
         };
 
         img.onerror = () => {
-          console.warn(`[UserAssets] Não foi possível decodificar imagem: "${file.name}"`);
-          reject(new Error(`Falha ao decodificar "${file.name}".`));
+          console.warn(`[UserAssets] Could not decode image: "${file.name}"`);
+          reject(new Error(I18n.t('error.decodeFail', file.name)));
         };
 
-        // Inicia o carregamento da imagem a partir do Base64
+        // Start loading the image from Base64
         img.src = dataURL;
       };
 
       reader.onerror = () => {
-        reject(new Error(`Falha ao ler o arquivo "${file.name}".`));
+        reject(new Error(I18n.t('error.readFail', file.name)));
       };
 
       reader.readAsDataURL(file);
@@ -115,66 +115,67 @@ const UserAssets = (() => {
 
   // ---------------------------------------------------
   // remove(id)
-  // Remove um asset do cache pelo seu ID.
-  // Notifica o callback após a remoção.
+  // Removes an asset from the cache by its ID.
+  // Notifies the callback after removal.
   //
-  // @param {number} id  identificador único do asset
+  // @param {number} id  unique identifier of the asset
   // ---------------------------------------------------
   function remove(id) {
-    // Filtra o asset com o ID fornecido, mantendo todos os outros
+    // Filter out the asset with the given ID, keeping all others
     _assets = _assets.filter(a => a.id !== id);
     _notify();
   }
 
   // ---------------------------------------------------
   // setType(id, type)
-  // Altera o tipo de um asset existente.
-  // O tipo controla quais salas podem usar esta imagem.
+  // Changes the type of an existing asset.
+  // The type controls which rooms can use this image.
   //
-  // NÃO dispara _notify() intencionalmente: o seletor na sidebar
-  // já reflete o novo estado imediatamente pelo próprio evento
-  // 'change' do DOM. Re-renderizar a lista toda destruiria o foco
-  // no elemento e causaria piscar desnecessário.
+  // Does NOT fire _notify() intentionally: the selector
+  // in the sidebar already reflects the new state
+  // immediately through the DOM 'change' event itself.
+  // Re-rendering the entire list would destroy focus on
+  // the element and cause unnecessary flickering.
   //
-  // @param {number} id    identificador único do asset
+  // @param {number} id    unique identifier of the asset
   // @param {string} type  'any' | 'normal' | 'start' | 'end' | 'boss'
   // ---------------------------------------------------
   function setType(id, type) {
     const asset = _assets.find(a => a.id === id);
     if (!asset) return;
 
-    // Apenas muta o dado interno — a sidebar já mostra o valor correto
+    // Only mutate the internal data — the sidebar already shows the correct value
     asset.type = type;
   }
 
   // ---------------------------------------------------
   // getByType(type)
-  // Retorna assets cujo tipo corresponde ao solicitado.
+  // Returns assets whose type matches the requested one.
   //
-  // Lógica de fallback:
-  //  1. Busca assets com type === roomType (correspondência exata)
-  //  2. Se não encontrar, retorna assets com type === 'any'
-  //  3. Se nenhum, retorna array vazio (gerador usa fallback colorido)
+  // Fallback logic:
+  //  1. Search for assets with type === roomType (exact match)
+  //  2. If none found, return assets with type === 'any'
+  //  3. If none, return an empty array (generator uses colored fallback)
   //
-  // Isso garante que imagens "Qualquer/any" preenchem lacunas quando
-  // não há nenhuma imagem específica para aquele tipo de sala.
+  // This ensures that "Any" images fill gaps when there
+  // is no specific image for that room type.
   //
-  // @param {string} type  tipo de sala solicitado
+  // @param {string} type  requested room type
   // @returns {UserAsset[]}
   // ---------------------------------------------------
   function getByType(type) {
-    // Busca por correspondência exata de tipo
+    // Search by exact type match
     const exact = _assets.filter(a => a.type === type);
     if (exact.length > 0) return exact;
 
-    // Fallback: retorna imagens marcadas como "Qualquer"
+    // Fallback: return images marked as "Any"
     return _assets.filter(a => a.type === 'any');
   }
 
   // ---------------------------------------------------
   // getAll()
-  // Retorna uma cópia de todos os assets carregados.
-  // Usado pela sidebar para renderizar os cards.
+  // Returns a copy of all loaded assets.
+  // Used by the sidebar to render the cards.
   //
   // @returns {UserAsset[]}
   // ---------------------------------------------------
@@ -184,9 +185,9 @@ const UserAssets = (() => {
 
   // ---------------------------------------------------
   // hasAny()
-  // Indica se há pelo menos um asset carregado.
-  // Usado pelo MapGenerator para decidir entre
-  // user assets e AssetLoader.
+  // Indicates whether at least one asset is loaded.
+  // Used by MapGenerator to decide between
+  // user assets and AssetLoader.
   //
   // @returns {boolean}
   // ---------------------------------------------------
@@ -196,7 +197,7 @@ const UserAssets = (() => {
 
   // ---------------------------------------------------
   // clear()
-  // Remove todos os assets e notifica o callback.
+  // Removes all assets and notifies the callback.
   // ---------------------------------------------------
   function clear() {
     _assets = [];
@@ -205,15 +206,15 @@ const UserAssets = (() => {
 
   // ---------------------------------------------------
   // _notify()
-  // Chama o callback registrado com o array atual.
-  // Função interna — não exposta na API pública.
+  // Calls the registered callback with the current array.
+  // Internal function — not exposed in the public API.
   // ---------------------------------------------------
   function _notify() {
     if (_onChangeCb) _onChangeCb([..._assets]);
   }
 
   // ---------------------------------------------------
-  // API pública
+  // Public API
   // ---------------------------------------------------
   return { init, add, remove, setType, getByType, getAll, hasAny, clear };
 

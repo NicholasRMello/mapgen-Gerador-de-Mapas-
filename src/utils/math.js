@@ -1,49 +1,49 @@
 /**
- * math.js — Utilitários matemáticos para geometria do mapa
+ * math.js — Math utilities for map geometry
  *
- * Funções puras (sem estado) usadas por vários módulos.
+ * Pure functions (stateless) used by various modules.
  */
 
 const MathUtils = (() => {
 
   // ---------------------------------------------------
   // distance(a, b)
-  // Distância euclidiana entre dois pontos.
+  // Euclidean distance between two points.
   //
   // @param {{ x, y }} a
   // @param {{ x, y }} b
   // @returns {number}
   // ---------------------------------------------------
   function distance(a, b) {
-    // TODO: Math.sqrt((b.x - a.x)² + (b.y - a.y)²)
+    // TODO: Math.sqrt((b.x - a.x)^2 + (b.y - a.y)^2)
 
     return Math.sqrt(Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2));
   }
 
   // ---------------------------------------------------
   // rectCenter(rect)
-  // Retorna o centro de um retângulo.
+  // Returns the center of a rectangle.
   //
   // @param {{ x, y, width, height }} rect
   // @returns {{ x, y }}
   // ---------------------------------------------------
   function rectCenter(rect) {
-    // TODO: retornar { x: rect.x + rect.width/2, y: rect.y + rect.height/2 }
+    // TODO: return { x: rect.x + rect.width/2, y: rect.y + rect.height/2 }
 
     return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
   }
 
   // ---------------------------------------------------
   // rectsOverlap(a, b, padding)
-  // Verifica se dois retângulos se sobrepõem com margem extra.
+  // Checks if two rectangles overlap with extra margin.
   //
   // @param {{ x, y, width, height }} a
   // @param {{ x, y, width, height }} b
-  // @param {number} padding  margem adicional de espaçamento
+  // @param {number} padding  additional spacing margin
   // @returns {boolean}
   // ---------------------------------------------------
   function rectsOverlap(a, b, padding = 0) {
-    // TODO: comparar bordas considerando padding
+    // TODO: compare edges considering padding
     //   a.x + a.width  + padding > b.x  && etc.
 
     return (a.x + a.width + padding > b.x &&
@@ -54,7 +54,7 @@ const MathUtils = (() => {
 
   // ---------------------------------------------------
   // clamp(value, min, max)
-  // Limita value dentro do intervalo [min, max].
+  // Clamps value within the range [min, max].
   //
   // @returns {number}
   // ---------------------------------------------------
@@ -66,9 +66,9 @@ const MathUtils = (() => {
 
   // ---------------------------------------------------
   // lerp(a, b, t)
-  // Interpolação linear entre a e b.
+  // Linear interpolation between a and b.
   //
-  // @param {number} t  progresso de 0 a 1
+  // @param {number} t  progress from 0 to 1
   // @returns {number}
   // ---------------------------------------------------
   function lerp(a, b, t) {
@@ -78,15 +78,15 @@ const MathUtils = (() => {
 
   // ---------------------------------------------------
   // pointInRect(point, rect)
-  // Verifica se um ponto está dentro de um retângulo.
-  // Útil para detectar clique numa sala.
+  // Checks if a point is inside a rectangle.
+  // Useful for detecting a click on a room.
   //
   // @param {{ x, y }} point
   // @param {{ x, y, width, height }} rect
   // @returns {boolean}
   // ---------------------------------------------------
   function pointInRect(point, rect) {
-    // TODO: checar se point.x e point.y estão dentro de rect
+    // TODO: check if point.x and point.y are inside rect
     return (point.x >= rect.x &&
             point.x <= rect.x + rect.width &&
             point.y >= rect.y &&
@@ -94,7 +94,7 @@ const MathUtils = (() => {
   }
 
   // ---------------------------------------------------
-  // API pública
+  // Public API
   // ---------------------------------------------------
   return { distance, rectCenter, rectsOverlap, clamp, lerp, pointInRect };
 

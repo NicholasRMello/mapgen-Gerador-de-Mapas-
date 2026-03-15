@@ -1,80 +1,28 @@
 # MapGen — Procedural Map Generator
 
-Esqueleto de projeto para geração procedural de mapas com Canvas 2D e assets PNG.
+A browser-based procedural dungeon map generator built with vanilla JavaScript and HTML5 Canvas 2D. Create random dungeon maps for tabletop RPGs, game design prototyping, or creative inspiration.
 
----
+## Features
 
-## Estrutura de Pastas
+- **Procedural map generation** — Generates unique dungeon layouts with rooms and corridors using seeded randomness
+- **Seed system** — Share seeds to reproduce the exact same map
+- **Custom images** — Drag & drop your own room images to personalize the map
+- **Annotation pins** — Place pins on corridors with notes for RPG storytelling (obstacles, events, encounters)
+- **Pan & zoom** — Navigate the map with mouse drag and scroll wheel
+- **Room details** — Click any room to see its properties (type, size, connections)
+- **Multilingual** — Toggle between English and Portuguese (PT-BR)
 
-```
-mapgen/
-│
-├── index.html                  ← Página principal (header + canvas + sidebars)
-├── css/
-│   └── style.css               ← Tema visual (variáveis CSS, layout)
-│
-├── assets/
-│   ├── rooms/                  ← PNGs de salas (cave.png, dungeon.png, etc.)
-│   ├── tiles/                  ← PNGs de tiles de chão/parede
-│   └── ui/                     ← Ícones especiais (start.png, boss.png, etc.)
-│
-└── src/
-    ├── main.js                 ← Ponto de entrada: init, eventos, orquestração
-    │
-    ├── core/
-    │   ├── assetLoader.js      ← Carrega PNGs e popula a sidebar
-    │   ├── mapGenerator.js     ← Gera salas posicionadas sem sobreposição
-    │   └── corridorBuilder.js  ← Conecta salas com corredores (MST + extras)
-    │
-    ├── render/
-    │   ├── renderer.js         ← Desenha tudo no Canvas 2D
-    │   └── camera.js           ← Pan e zoom com mouse/touch
-    │
-    └── utils/
-        ├── random.js           ← PRNG seedável (Mulberry32 ou similar)
-        └── math.js             ← Geometria: distância, overlap, clamp, lerp
-```
+## How to Use
 
----
+1. Open `index.html` in any modern browser (no server required)
+2. Optionally drag & drop images into the left sidebar to use as room textures
+3. Enter a seed or leave blank for a random one
+4. Choose map size (Small / Medium / Large) and click **Generate Map**
+5. Pan the map by dragging, zoom with the scroll wheel
+6. Click on rooms to see details in the right panel
+7. Use the **Add Pin** button to place annotation markers on corridors
+8. Toggle language with the **PT-BR / EN** button in the top bar
 
-## Como usar com XAMPP
+## Live Demo
 
-1. Copie a pasta `mapgen/` para `C:/xampp/htdocs/mapgen/`
-2. Inicie o Apache no painel do XAMPP
-3. Acesse `http://localhost/mapgen/` no navegador
-
----
-
-## Fluxo de dados
-
-```
-AssetLoader.load()
-    ↓
-MapGenerator.generate(options)
-    ↓ usa Random + MathUtils
-    ↓ chama CorridorBuilder.build(rooms)
-    ↓
-Renderer.draw(map)
-    ↓ usa Camera para transformação
-    ↓ usa AssetLoader.get(key) para PNGs
-```
-
----
-
-## Ordem de implementação sugerida
-
-1. `utils/random.js`       → base de tudo
-2. `utils/math.js`         → funções geométricas
-3. `core/assetLoader.js`   → carregar seus PNGs
-4. `core/mapGenerator.js`  → posicionar salas
-5. `core/corridorBuilder.js` → conectar salas
-6. `render/camera.js`      → pan/zoom
-7. `render/renderer.js`    → desenhar no canvas
-8. `src/main.js`           → ligar tudo
-
----
-
-## Adicionando seus PNGs
-
-Coloque os arquivos em `assets/rooms/`, `assets/tiles/` ou `assets/ui/`
-e registre-os no array `ASSET_MANIFEST` dentro de `assetLoader.js`.
+Available at: `https://nicholasrmello.github.io/mapgen-Gerador-de-Mapas-/`

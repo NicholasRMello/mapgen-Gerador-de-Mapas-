@@ -1,87 +1,87 @@
 /**
- * mapGenerator.js — Núcleo de geração procedural
+ * mapGenerator.js — Procedural generation core
  *
- * Responsabilidades:
- *  - Criar a estrutura de dados do mapa (salas + corredores)
- *  - Posicionar salas em grade virtual para evitar cruzamento de corredores
- *  - Expor o mapa gerado para o Renderer e CorridorBuilder
+ * Responsibilities:
+ *  - Create the map data structure (rooms + corridors)
+ *  - Position rooms on a virtual grid to avoid corridor crossings
+ *  - Expose the generated map to the Renderer and CorridorBuilder
  *
- * Estrutura esperada de um mapa:
+ * Expected structure of a map:
  * {
  *   seed:      string,
- *   width:     number,   // largura total da área de geração em pixels
- *   height:    number,   // altura total da área de geração em pixels
+ *   width:     number,   // total width of the generation area in pixels
+ *   height:    number,   // total height of the generation area in pixels
  *   rooms:     Room[],
  *   corridors: Corridor[],
  * }
  *
- * Estrutura de uma Room:
+ * Structure of a Room:
  * {
  *   id:          number,
  *   x:           number,
  *   y:           number,
  *   width:       number,
  *   height:      number,
- *   assetKey:    string | null,   // chave estática do AssetLoader (fallback sem user assets)
- *   userAsset:   object | null,   // objeto { id, name, img, type } do UserAssets
+ *   assetKey:    string | null,   // static key from AssetLoader (fallback without user assets)
+ *   userAsset:   object | null,   // object { id, name, img, type } from UserAssets
  *   type:        string,          // 'start' | 'end' | 'normal' | 'boss'
- *   connections: number[],        // ids das salas conectadas por corredor
+ *   connections: number[],        // ids of rooms connected by corridor
  * }
  */
 
 const MapGenerator = (() => {
 
   // ---------------------------------------------------
-  // Configurações padrão — ajuste conforme necessário
+  // Default settings — adjust as needed
   // ---------------------------------------------------
   const DEFAULTS = {
     roomCount:      { small: 5, medium: 10, large: 20 },
-    mapWidth:       2000,  // largura total da área de geração (px)
-    mapHeight:      1500,  // altura total da área de geração (px)
-    minRoomSize:    80,    // tamanho mínimo de uma sala (px)
-    maxRoomSize:    160,   // tamanho máximo de uma sala (px)
-    corridorMargin: 60,    // margem reservada em cada borda de célula para corredor
+    mapWidth:       2000,  // total width of the generation area (px)
+    mapHeight:      1500,  // total height of the generation area (px)
+    minRoomSize:    80,    // minimum room size (px)
+    maxRoomSize:    160,   // maximum room size (px)
+    corridorMargin: 60,    // margin reserved on each cell edge for corridors
     //
-    // corridorMargin é a chave do sistema de posicionamento em grade:
-    // o mapa é dividido em células; cada sala fica dentro da sua célula
-    // com esta margem em todos os lados. Isso garante que corredores
-    // entre células adjacentes passem ENTRE as salas, nunca ATRAVÉS.
+    // corridorMargin is the key to the grid positioning system:
+    // the map is divided into cells; each room sits inside its cell
+    // with this margin on all sides. This ensures that corridors
+    // between adjacent cells pass BETWEEN rooms, never THROUGH them.
   };
 
   // ---------------------------------------------------
-  // generate(options) — função principal pública
+  // generate(options) — main public function
   //
-  // Aplica o seed, determina a quantidade de salas pelo
-  // tamanho escolhido, gera e retorna o mapa completo.
+  // Applies the seed, determines the room count based on
+  // the chosen size, generates and returns the complete map.
   //
   // @param {object} options
-  //   - seed       {string}  seed de aleatoriedade
+  //   - seed       {string}  randomness seed
   //   - size       {string}  'small' | 'medium' | 'large'
-  //   - assets     {object}  referência ao AssetLoader (fallback estático)
-  //   - userAssets {object}  referência ao UserAssets (imagens do usuário)
+  //   - assets     {object}  reference to AssetLoader (static fallback)
+  //   - userAssets {object}  reference to UserAssets (user images)
   //
-  // @returns {object} mapa completo com rooms e corridors
+  // @returns {object} complete map with rooms and corridors
   // ---------------------------------------------------
   function generate(options) {
-    // Inicializa o gerador pseudoaleatório com o seed fornecido
-    // para garantir que o mesmo seed sempre produza o mesmo mapa
+    // Initialize the pseudorandom generator with the provided seed
+    // to ensure the same seed always produces the same map
     Random.seed(options.seed);
 
-    // Determina a quantidade de salas com base no tamanho selecionado
+    // Determine the room count based on the selected size
     const size  = options.size || 'medium';
     const count = DEFAULTS.roomCount[size] || DEFAULTS.roomCount.medium;
 
-    // Posiciona salas em grade virtual (sem sobreposição garantida)
+    // Position rooms on a virtual grid (guaranteed no overlap)
     const rooms = _placeRooms(count);
 
-    // Define tipos especiais (start, end, boss) ANTES de atribuir imagens
-    // para que a imagem correta seja escolhida para cada tipo
+    // Define special types (start, end, boss) BEFORE assigning images
+    // so that the correct image is chosen for each type
     _markSpecialRooms(rooms);
 
-    // Atribui imagem a cada sala (user asset → assetLoader → null)
+    // Assign an image to each room (user asset -> assetLoader -> null)
     _assignRoomAssets(rooms, options.userAssets, options.assets);
 
-    // Constrói corredores conectando todas as salas via MST
+    // Build corridors connecting all rooms via MST
     const corridors = CorridorBuilder.build(rooms);
 
     return {
@@ -95,37 +95,37 @@ const MapGenerator = (() => {
 
   // ---------------------------------------------------
   // _placeRooms(count)
-  // Posiciona salas usando um sistema de GRADE VIRTUAL.
+  // Positions rooms using a VIRTUAL GRID system.
   //
-  // Como funciona:
-  //  1. O mapa é dividido em cols×rows células — cada sala
-  //     recebe uma célula exclusiva escolhida aleatoriamente.
-  //  2. Dentro de cada célula, a sala é posicionada com margem
-  //     DEFAULTS.corridorMargin em todos os lados.
-  //  3. Essa margem é o "canal" do corredor: garante que qualquer
-  //     corredor entre células adjacentes passe ENTRE salas,
-  //     nunca ATRAVÉS de uma sala.
+  // How it works:
+  //  1. The map is divided into cols x rows cells — each room
+  //     gets an exclusive cell chosen randomly.
+  //  2. Within each cell, the room is positioned with a margin of
+  //     DEFAULTS.corridorMargin on all sides.
+  //  3. This margin is the corridor "channel": it ensures that any
+  //     corridor between adjacent cells passes BETWEEN rooms,
+  //     never THROUGH a room.
   //
-  // Layouts de grade por quantidade de salas:
-  //   small  (5)  → 3×2 = 6  células → ~667×750 px por célula
-  //   medium (10) → 4×3 = 12 células → ~500×500 px por célula
-  //   large  (20) → 5×4 = 20 células → ~400×375 px por célula
+  // Grid layouts by room count:
+  //   small  (5)  -> 3x2 = 6  cells -> ~667x750 px per cell
+  //   medium (10) -> 4x3 = 12 cells -> ~500x500 px per cell
+  //   large  (20) -> 5x4 = 20 cells -> ~400x375 px per cell
   //
-  // @param {number} count  número de salas a gerar
+  // @param {number} count  number of rooms to generate
   // @returns {Room[]}
   // ---------------------------------------------------
   function _placeRooms(count) {
-    // Calcula as dimensões da grade usando a proporção do mapa
-    // para criar células aproximadamente quadradas
+    // Calculate grid dimensions using the map's aspect ratio
+    // to create approximately square cells
     const cols = Math.ceil(Math.sqrt(count * DEFAULTS.mapWidth / DEFAULTS.mapHeight));
     const rows = Math.ceil(count / cols);
 
-    // Tamanho de cada célula em pixels
+    // Size of each cell in pixels
     const cellW = DEFAULTS.mapWidth  / cols;
     const cellH = DEFAULTS.mapHeight / rows;
 
-    // Cria todas as posições de célula (col, row) e embaralha
-    // para distribuição aleatória mas determinística pelo seed
+    // Create all cell positions (col, row) and shuffle them
+    // for random but deterministic distribution via seed
     const cells = [];
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
@@ -140,24 +140,24 @@ const MapGenerator = (() => {
     for (let i = 0; i < count && i < cells.length; i++) {
       const { col, row } = cells[i];
 
-      // Canto superior-esquerdo da célula em pixels
+      // Top-left corner of the cell in pixels
       const cellLeft = col * cellW;
       const cellTop  = row * cellH;
 
-      // Tamanho máximo da sala confinado dentro da célula menos as margens
+      // Maximum room size constrained within the cell minus the margins
       const maxW = Math.max(DEFAULTS.minRoomSize, Math.floor(cellW - 2 * m));
       const maxH = Math.max(DEFAULTS.minRoomSize, Math.floor(cellH - 2 * m));
 
       const w = Random.int(DEFAULTS.minRoomSize, Math.min(DEFAULTS.maxRoomSize, maxW));
       const h = Random.int(DEFAULTS.minRoomSize, Math.min(DEFAULTS.maxRoomSize, maxH));
 
-      // Espaço disponível para variação de posição dentro da célula
-      // (espaço da célula - tamanho da sala - margem de ambos os lados)
+      // Available space for position variation within the cell
+      // (cell space - room size - margin on both sides)
       const xSpace = cellW - w - 2 * m;
       const ySpace = cellH - h - 2 * m;
 
-      // Posição aleatória dentro das margens da célula
-      // Se não houver espaço sobrante, centraliza a sala na célula
+      // Random position within the cell margins
+      // If there is no remaining space, center the room in the cell
       const x = Math.round(cellLeft + m + (xSpace > 0 ? Random.float(0, xSpace) : xSpace / 2));
       const y = Math.round(cellTop  + m + (ySpace > 0 ? Random.float(0, ySpace) : ySpace / 2));
 
@@ -167,10 +167,10 @@ const MapGenerator = (() => {
         y,
         width:       w,
         height:      h,
-        assetKey:    null,     // preenchido por _assignRoomAssets
-        userAsset:   null,     // preenchido por _assignRoomAssets
-        type:        'normal', // ajustado por _markSpecialRooms
-        connections: [],       // preenchido pelo CorridorBuilder
+        assetKey:    null,     // filled by _assignRoomAssets
+        userAsset:   null,     // filled by _assignRoomAssets
+        type:        'normal', // adjusted by _markSpecialRooms
+        connections: [],       // filled by CorridorBuilder
       });
     }
 
@@ -179,26 +179,26 @@ const MapGenerator = (() => {
 
   // ---------------------------------------------------
   // _markSpecialRooms(rooms)
-  // Define os tipos especiais das salas após o posicionamento.
+  // Defines the special types of rooms after positioning.
   //
-  //  - 'start' → primeira sala do array (ponto de entrada do jogador)
-  //  - 'end'   → sala mais distante da sala inicial (objetivo final)
-  //  - 'boss'  → sala normal mais distante do início (mini-chefe)
+  //  - 'start' -> first room in the array (player entry point)
+  //  - 'end'   -> room farthest from the starting room (final objective)
+  //  - 'boss'  -> normal room farthest from start (mini-boss)
   //
-  // @param {Room[]} rooms  array de salas (modificado in-place)
+  // @param {Room[]} rooms  array of rooms (modified in-place)
   // ---------------------------------------------------
   function _markSpecialRooms(rooms) {
     if (rooms.length === 0) return;
 
-    // A primeira sala gerada é sempre o ponto de início
+    // The first generated room is always the starting point
     rooms[0].type = 'start';
 
     if (rooms.length === 1) return;
 
-    // Calcula o centro da sala inicial como referência de distâncias
+    // Calculate the center of the starting room as a distance reference
     const startCenter = MathUtils.rectCenter(rooms[0]);
 
-    // Encontra a sala mais distante do início → sala de fim
+    // Find the room farthest from start -> end room
     let farthestRoom     = rooms[1];
     let farthestDistance = 0;
 
@@ -214,13 +214,13 @@ const MapGenerator = (() => {
 
     farthestRoom.type = 'end';
 
-    // Marca uma sala de boss se houver salas suficientes (≥ 3 salas)
+    // Mark a boss room if there are enough rooms (>= 3 rooms)
     if (rooms.length >= 3) {
       let bossRoom     = null;
       let bestDistance = 0;
 
       rooms.forEach(room => {
-        // Só considera salas normais (não start nem end)
+        // Only consider normal rooms (not start or end)
         if (room.type !== 'normal') return;
 
         const dist = MathUtils.distance(startCenter, MathUtils.rectCenter(room));
@@ -236,32 +236,32 @@ const MapGenerator = (() => {
 
   // ---------------------------------------------------
   // _assignRoomAssets(rooms, userAssets, assetLoader)
-  // Atribui a imagem correta para cada sala APÓS os tipos
-  // já terem sido definidos por _markSpecialRooms().
+  // Assigns the correct image to each room AFTER types
+  // have already been defined by _markSpecialRooms().
   //
-  // Cadeia de prioridade:
-  //  1. UserAssets com type === room.type  (correspondência exata)
-  //  2. UserAssets com type === 'any'       (curinga do usuário)
-  //  3. AssetLoader.getKeys('rooms')        (PNGs estáticos do manifesto)
-  //  4. null                                (renderer usa retângulo colorido)
+  // Priority chain:
+  //  1. UserAssets with type === room.type  (exact match)
+  //  2. UserAssets with type === 'any'       (user wildcard)
+  //  3. AssetLoader.getKeys('rooms')         (static PNGs from manifest)
+  //  4. null                                 (renderer uses colored rectangle)
   //
-  // Random.pick() garante seleção determinística pelo seed.
+  // Random.pick() ensures deterministic selection via seed.
   //
   // @param {Room[]} rooms
-  // @param {object} userAssets  módulo UserAssets (pode ser null)
-  // @param {object} assetLoader módulo AssetLoader (fallback estático)
+  // @param {object} userAssets  UserAssets module (can be null)
+  // @param {object} assetLoader AssetLoader module (static fallback)
   // ---------------------------------------------------
   function _assignRoomAssets(rooms, userAssets, assetLoader) {
     const hasUserAssets = userAssets && userAssets.hasAny();
 
-    // Pré-carrega as keys estáticas só se não houver user assets
+    // Pre-load static keys only if there are no user assets
     const staticKeys = (assetLoader && !hasUserAssets)
       ? assetLoader.getKeys('rooms')
       : [];
 
     rooms.forEach(room => {
       if (hasUserAssets) {
-        // getByType() já aplica fallback para 'any' internamente
+        // getByType() already applies fallback to 'any' internally
         const candidates = userAssets.getByType(room.type);
         if (candidates.length > 0) {
           room.userAsset = Random.pick(candidates);
@@ -275,7 +275,7 @@ const MapGenerator = (() => {
   }
 
   // ---------------------------------------------------
-  // API pública
+  // Public API
   // ---------------------------------------------------
   return { generate };
 

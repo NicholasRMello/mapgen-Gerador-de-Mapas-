@@ -1,118 +1,118 @@
 /**
- * camera.js — Controle de câmera (pan e zoom) no canvas
+ * camera.js — Camera control (pan and zoom) on the canvas
  *
- * Responsabilidades:
- *  - Rastrear offset (x, y) e escala (zoom)
- *  - Aplicar transformação no ctx antes de renderizar
- *  - Converter coordenadas de tela para coordenadas de mapa
- *  - Gerenciar input de mouse para pan (arrastar) e zoom (scroll)
+ * Responsibilities:
+ *  - Track offset (x, y) and scale (zoom)
+ *  - Apply transformation to ctx before rendering
+ *  - Convert screen coordinates to map coordinates
+ *  - Manage mouse input for pan (drag) and zoom (scroll)
  *
- * Fluxo de transformação:
+ * Transformation flow:
  *  - apply(ctx)  → ctx.save() → translate(x,y) → scale(zoom)
  *  - restore(ctx) → ctx.restore()
  *
- * Fórmula de "zoom centrado no cursor":
- *  Ao fazer zoom, o ponto do mapa sob o cursor deve permanecer fixo.
- *  Para isso, ajustamos o offset (x, y) compensando o zoom:
+ * "Cursor-centered zoom" formula:
+ *  When zooming, the map point under the cursor must remain fixed.
+ *  To achieve this, we adjust the offset (x, y) to compensate for the zoom:
  *    newX = cursorX - (cursorX - oldX) * (newZoom / oldZoom)
  *    newY = cursorY - (cursorY - oldY) * (newZoom / oldZoom)
  */
 
 const Camera = (() => {
 
-  // Estado interno da câmera — toda a transformação é definida por estes valores
+  // Internal camera state — the entire transformation is defined by these values
   const _state = {
-    x:       0,     // deslocamento horizontal (pan) em pixels de tela
-    y:       0,     // deslocamento vertical (pan) em pixels de tela
-    zoom:    1.0,   // fator de escala atual (1.0 = 100%)
-    minZoom: 0.3,   // zoom mínimo permitido (30%)
-    maxZoom: 3.0,   // zoom máximo permitido (300%)
+    x:       0,     // horizontal offset (pan) in screen pixels
+    y:       0,     // vertical offset (pan) in screen pixels
+    zoom:    1.0,   // current scale factor (1.0 = 100%)
+    minZoom: 0.3,   // minimum allowed zoom (30%)
+    maxZoom: 3.0,   // maximum allowed zoom (300%)
   };
 
-  // Flag e posição inicial para controle do arrastar (pan com mouse)
+  // Flag and initial position for drag control (mouse pan)
   let _isDragging = false;
-  let _dragStartX = 0;   // posição X do mouse ao iniciar o drag
-  let _dragStartY = 0;   // posição Y do mouse ao iniciar o drag
-  let _camStartX  = 0;   // valor de _state.x no início do drag
-  let _camStartY  = 0;   // valor de _state.y no início do drag
+  let _dragStartX = 0;   // mouse X position when drag started
+  let _dragStartY = 0;   // mouse Y position when drag started
+  let _camStartX  = 0;   // _state.x value at drag start
+  let _camStartY  = 0;   // _state.y value at drag start
 
-  // Referência ao canvas para uso nos event handlers
-  // (precisamos dela para calcular o bounding rect nos eventos de wheel)
+  // Reference to the canvas for use in event handlers
+  // (needed to calculate the bounding rect in wheel events)
   let _canvas = null;
 
-  // Referência ao Renderer.draw para acionar re-renderização ao mover câmera
-  // Será atribuída na função init para evitar acoplamento circular
+  // Reference to Renderer.draw to trigger re-rendering when the camera moves
+  // Will be assigned in the init function to avoid circular coupling
   let _onChangeCallback = null;
 
   // ---------------------------------------------------
   // init(canvas, onChangeCallback)
-  // Registra todos os event listeners de mouse no canvas.
-  // Deve ser chamada uma vez na inicialização da aplicação.
+  // Registers all mouse event listeners on the canvas.
+  // Must be called once during application initialization.
   //
   // @param {HTMLCanvasElement} canvas
-  // @param {Function} onChangeCallback  função chamada ao mover/zoom a câmera
+  // @param {Function} onChangeCallback  function called on camera move/zoom
   // ---------------------------------------------------
   function init(canvas, onChangeCallback) {
-    // Armazena referências para uso posterior nos handlers
+    // Store references for later use in handlers
     _canvas           = canvas;
     _onChangeCallback = onChangeCallback || function () {};
 
-    // Registra os eventos de mouse para pan e zoom
+    // Register mouse events for pan and zoom
     canvas.addEventListener('mousedown',  _onMouseDown);
     canvas.addEventListener('mousemove',  _onMouseMove);
     canvas.addEventListener('mouseup',    _onMouseUp);
-    canvas.addEventListener('mouseleave', _onMouseUp);   // cancela drag ao sair do canvas
-    canvas.addEventListener('wheel',      _onWheel, { passive: false }); // passive:false para preventDefault
+    canvas.addEventListener('mouseleave', _onMouseUp);   // cancel drag when leaving the canvas
+    canvas.addEventListener('wheel',      _onWheel, { passive: false }); // passive:false for preventDefault
 
-    // Muda o cursor para indicar que o canvas é arrastável
+    // Change cursor to indicate the canvas is draggable
     canvas.style.cursor = 'grab';
   }
 
   // ---------------------------------------------------
   // apply(ctx)
-  // Salva o estado do contexto e aplica as transformações
-  // da câmera (translação + escala) para que todo o desenho
-  // subsequente seja feito no espaço de coordenadas do mapa.
+  // Saves the context state and applies camera
+  // transformations (translation + scale) so that all
+  // subsequent drawing is done in the map coordinate space.
   //
-  // IMPORTANTE: sempre chame restore(ctx) após terminar de desenhar.
+  // IMPORTANT: always call restore(ctx) after finishing drawing.
   //
   // @param {CanvasRenderingContext2D} ctx
   // ---------------------------------------------------
   function apply(ctx) {
-    // Salva a matriz de transformação atual para restaurar depois
+    // Save the current transformation matrix to restore later
     ctx.save();
 
-    // Aplica o deslocamento de pan (move a origem do sistema de coordenadas)
+    // Apply the pan offset (move the coordinate system origin)
     ctx.translate(_state.x, _state.y);
 
-    // Aplica o fator de zoom (escala o espaço de coordenadas)
+    // Apply the zoom factor (scale the coordinate space)
     ctx.scale(_state.zoom, _state.zoom);
   }
 
   // ---------------------------------------------------
   // restore(ctx)
-  // Restaura o estado do contexto ao que era antes de apply().
-  // Deve ser chamada após todo o desenho do mapa.
+  // Restores the context state to what it was before apply().
+  // Must be called after all map drawing is complete.
   //
   // @param {CanvasRenderingContext2D} ctx
   // ---------------------------------------------------
   function restore(ctx) {
-    // Restaura a matriz de transformação salva por apply()
+    // Restore the transformation matrix saved by apply()
     ctx.restore();
   }
 
   // ---------------------------------------------------
   // screenToWorld(screenX, screenY)
-  // Converte coordenadas de tela (ex.: posição de clique)
-  // para coordenadas do mundo/mapa, levando em conta
-  // o pan e zoom atuais da câmera.
+  // Converts screen coordinates (e.g., click position)
+  // to world/map coordinates, accounting for the current
+  // camera pan and zoom.
   //
-  // Inversão da transformação:
+  // Transformation inversion:
   //   worldX = (screenX - offsetX) / zoom
   //   worldY = (screenY - offsetY) / zoom
   //
-  // @param {number} screenX  coordenada X em pixels de tela
-  // @param {number} screenY  coordenada Y em pixels de tela
+  // @param {number} screenX  X coordinate in screen pixels
+  // @param {number} screenY  Y coordinate in screen pixels
   // @returns {{ x: number, y: number }}
   // ---------------------------------------------------
   function screenToWorld(screenX, screenY) {
@@ -124,26 +124,26 @@ const Camera = (() => {
 
   // ---------------------------------------------------
   // centerOn(worldX, worldY, canvasWidth, canvasHeight)
-  // Reposiciona a câmera para centralizar o ponto
-  // (worldX, worldY) do mapa no centro da tela.
-  // Útil para focar na sala de início ao gerar um novo mapa.
+  // Repositions the camera to center the map point
+  // (worldX, worldY) in the middle of the screen.
+  // Useful for focusing on the start room when generating a new map.
   //
-  // @param {number} worldX        coordenada X no espaço do mapa
-  // @param {number} worldY        coordenada Y no espaço do mapa
+  // @param {number} worldX        X coordinate in map space
+  // @param {number} worldY        Y coordinate in map space
   // @param {number} canvasWidth
   // @param {number} canvasHeight
   // ---------------------------------------------------
   function centerOn(worldX, worldY, canvasWidth, canvasHeight) {
-    // Calcula o offset necessário para que (worldX, worldY) fique no centro da tela
-    // Fórmula: offset = centroTela - (posicaoMundo * zoom)
+    // Calculate the offset needed so (worldX, worldY) is at the screen center
+    // Formula: offset = screenCenter - (worldPosition * zoom)
     _state.x = canvasWidth  / 2 - worldX * _state.zoom;
     _state.y = canvasHeight / 2 - worldY * _state.zoom;
   }
 
   // ---------------------------------------------------
   // reset()
-  // Volta a câmera para o estado inicial: sem deslocamento
-  // e com zoom padrão (1.0 = 100%).
+  // Returns the camera to its initial state: no offset
+  // and default zoom (1.0 = 100%).
   // ---------------------------------------------------
   function reset() {
     _state.x    = 0;
@@ -153,97 +153,97 @@ const Camera = (() => {
 
   // ---------------------------------------------------
   // _onMouseDown(event)
-  // Inicia o pan: marca o início do drag e salva a
-  // posição inicial do mouse e da câmera.
+  // Starts the pan: marks the drag start and saves
+  // the initial mouse and camera positions.
   // ---------------------------------------------------
   function _onMouseDown(event) {
-    // Apenas o botão esquerdo inicia o drag
+    // Only the left button starts the drag
     if (event.button !== 0) return;
 
     _isDragging = true;
-    _dragStartX = event.clientX;  // posição inicial do cursor (tela)
+    _dragStartX = event.clientX;  // initial cursor position (screen)
     _dragStartY = event.clientY;
-    _camStartX  = _state.x;       // posição inicial da câmera
+    _camStartX  = _state.x;       // initial camera position
     _camStartY  = _state.y;
 
-    // Muda o cursor para indicar que está arrastando
+    // Change cursor to indicate dragging is in progress
     if (_canvas) _canvas.style.cursor = 'grabbing';
   }
 
   // ---------------------------------------------------
   // _onMouseMove(event)
-  // Atualiza o offset da câmera enquanto o botão está pressionado.
-  // Calcula o delta entre a posição atual e inicial do drag.
+  // Updates the camera offset while the button is pressed.
+  // Calculates the delta between the current and initial drag position.
   // ---------------------------------------------------
   function _onMouseMove(event) {
-    // Só atualiza se estiver em modo de drag
+    // Only update if in drag mode
     if (!_isDragging) return;
 
-    // Calcula o quanto o mouse se moveu desde o início do drag
+    // Calculate how much the mouse has moved since the drag started
     const deltaX = event.clientX - _dragStartX;
     const deltaY = event.clientY - _dragStartY;
 
-    // Aplica o deslocamento à posição inicial da câmera (não acumula delta)
+    // Apply the offset to the initial camera position (does not accumulate delta)
     _state.x = _camStartX + deltaX;
     _state.y = _camStartY + deltaY;
 
-    // Notifica o Renderer para redesenhar com a nova posição
+    // Notify the Renderer to redraw with the new position
     _onChangeCallback();
   }
 
   // ---------------------------------------------------
   // _onMouseUp(event)
-  // Finaliza o pan ao soltar o botão do mouse.
+  // Ends the pan when the mouse button is released.
   // ---------------------------------------------------
   function _onMouseUp() {
     _isDragging = false;
 
-    // Restaura o cursor padrão de mão aberta
+    // Restore the default open-hand cursor
     if (_canvas) _canvas.style.cursor = 'grab';
   }
 
   // ---------------------------------------------------
   // _onWheel(event)
-  // Controla o zoom com a roda do mouse.
+  // Controls zoom with the mouse wheel.
   //
-  // Implementa "zoom centrado no cursor":
-  // O ponto do mapa sob o cursor permanece fixo durante o zoom,
-  // ajustando o offset para compensar a mudança de escala.
+  // Implements "cursor-centered zoom":
+  // The map point under the cursor stays fixed during zoom,
+  // adjusting the offset to compensate for the scale change.
   // ---------------------------------------------------
   function _onWheel(event) {
-    // Previne o scroll da página ao fazer zoom no canvas
+    // Prevent page scrolling when zooming on the canvas
     event.preventDefault();
 
-    // Fator de zoom por passo da roda do mouse
-    // deltaY > 0 = scroll para baixo = afastar (zoom out)
-    // deltaY < 0 = scroll para cima  = aproximar (zoom in)
+    // Zoom factor per mouse wheel step
+    // deltaY > 0 = scroll down = zoom out
+    // deltaY < 0 = scroll up   = zoom in
     const zoomFactor = event.deltaY > 0 ? 0.9 : 1.1;
 
-    // Calcula o novo zoom respeitando os limites mínimo e máximo
+    // Calculate the new zoom respecting minimum and maximum limits
     const newZoom = MathUtils.clamp(
       _state.zoom * zoomFactor,
       _state.minZoom,
       _state.maxZoom
     );
 
-    // Calcula a posição do cursor relativa ao canvas (não à janela)
+    // Calculate the cursor position relative to the canvas (not the window)
     const rect    = _canvas.getBoundingClientRect();
     const cursorX = event.clientX - rect.left;
     const cursorY = event.clientY - rect.top;
 
-    // Ajusta o offset para manter o ponto sob o cursor parado
-    // Derivação: worldPontoCursor = (cursor - offset) / zoom
-    // Após zoom: newOffset = cursor - worldPontoCursor * newZoom
+    // Adjust the offset to keep the point under the cursor stationary
+    // Derivation: worldCursorPoint = (cursor - offset) / zoom
+    // After zoom: newOffset = cursor - worldCursorPoint * newZoom
     _state.x = cursorX - (cursorX - _state.x) * (newZoom / _state.zoom);
     _state.y = cursorY - (cursorY - _state.y) * (newZoom / _state.zoom);
     _state.zoom = newZoom;
 
-    // Notifica o Renderer para redesenhar com o novo zoom
+    // Notify the Renderer to redraw with the new zoom
     _onChangeCallback();
   }
 
   // ---------------------------------------------------
-  // API pública
+  // Public API
   // ---------------------------------------------------
   return { init, apply, restore, screenToWorld, centerOn, reset };
 

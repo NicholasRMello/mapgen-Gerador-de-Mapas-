@@ -1,127 +1,134 @@
 /**
- * main.js — Ponto de entrada e orquestrador da aplicação
+ * main.js — Entry point and application orchestrator
  *
- * Responsabilidades:
- *  - Inicializar todos os módulos na ordem correta
- *  - Capturar eventos dos controles do header (botões, inputs)
- *  - Gerenciar o drag-and-drop de imagens do usuário
- *  - Orquestrar o ciclo: seed → gerar mapa → renderizar
- *  - Atualizar os painéis de status e debug no HTML
+ * Responsibilities:
+ *  - Initialize all modules in the correct order
+ *  - Capture events from header controls (buttons, inputs)
+ *  - Manage drag-and-drop of user images
+ *  - Orchestrate the cycle: seed → generate map → render
+ *  - Update the status and debug panels in the HTML
  *
- * Ordem de dependência entre módulos:
+ * Module dependency order:
  *   Random → MathUtils → AssetLoader + UserAssets → MapGenerator + CorridorBuilder → Renderer + Camera → Main
  */
 
 // -----------------------------------------------
-// Estado global da aplicação
-// Centraliza tudo que precisa ser compartilhado
-// entre módulos sem bibliotecas externas.
+// Global application state
+// Centralizes everything that needs to be shared
+// between modules without external libraries.
 // -----------------------------------------------
 const AppState = {
-  map:      null,   // objeto completo retornado pelo MapGenerator.generate()
-  seed:     null,   // seed atual usada para gerar o mapa (string ou número)
-  canvas:   null,   // referência ao elemento <canvas id="map-canvas">
-  ctx:      null,   // contexto 2D obtido de canvas.getContext('2d')
-  _pinMode: false,  // quando true, o próximo clique no canvas insere um pino
+  map:      null,   // complete object returned by MapGenerator.generate()
+  seed:     null,   // current seed used to generate the map (string or number)
+  canvas:   null,   // reference to the <canvas id="map-canvas"> element
+  ctx:      null,   // 2D context obtained from canvas.getContext('2d')
+  _pinMode: false,  // when true, the next click on the canvas inserts a pin
 };
 
-// Posição do mousedown para diferenciar clique de drag (pan da câmera).
-// Se o mouse se mover mais que 5px, o click é ignorado.
+// Mousedown position to differentiate a click from a drag (camera pan).
+// If the mouse moves more than 5px, the click is ignored.
 let _mouseDownPos = null;
 
 // -----------------------------------------------
 // init()
-// Função de inicialização chamada uma vez quando o DOM está pronto.
-// Configura canvas, módulos, drop zone e event listeners.
+// Initialization function called once when the DOM is ready.
+// Sets up canvas, modules, drop zone, and event listeners.
 // -----------------------------------------------
 function init() {
-  // Obtém a referência ao elemento canvas do HTML
+  // Get the reference to the canvas element from the HTML
   AppState.canvas = document.getElementById('map-canvas');
 
-  // Cria o contexto 2D para todas as operações de desenho
+  // Create the 2D context for all drawing operations
   AppState.ctx = AppState.canvas.getContext('2d');
 
-  // Inicializa o Renderer com as referências de canvas e contexto
+  // Apply saved language preference to the HTML lang attribute
+  document.documentElement.lang = I18n.getLang();
+
+  // Translate all static HTML elements based on saved language
+  I18n.translateDOM();
+
+  // Initialize the Renderer with canvas and context references
   Renderer.init(AppState.canvas, AppState.ctx);
 
-  // Inicializa a Camera passando o canvas e a função de redesenho como callback
-  // A câmera chamará Renderer.redraw() sempre que o usuário mover ou der zoom
+  // Initialize the Camera passing the canvas and the redraw function as callback
+  // The camera will call Renderer.redraw() whenever the user pans or zooms
   Camera.init(AppState.canvas, () => Renderer.redraw());
 
-  // Inicializa o módulo de assets do usuário.
-  // O callback _renderAssetSidebar é chamado automaticamente toda vez
-  // que o usuário adiciona, remove ou altera o tipo de uma imagem.
+  // Initialize the user assets module.
+  // The _renderAssetSidebar callback is called automatically every time
+  // the user adds, removes, or changes the type of an image.
   UserAssets.init(_renderAssetSidebar);
 
-  // Inicializa o módulo de pinos de anotação.
-  // O callback é chamado em add/remove/clear — atualiza a sidebar e o canvas.
+  // Initialize the annotation pins module.
+  // The callback is called on add/remove/clear — updates the sidebar and the canvas.
   PinManager.init((pins) => {
     _renderPinSidebar(pins);
     Renderer.setPins(pins);
     Renderer.redraw();
   });
 
-  // Configura o sistema de seções retráteis (accordion) da sidebar esquerda
+  // Set up the collapsible sections (accordion) system for the left sidebar
   _initSidebarSections();
 
-  // Configura o botão "Adicionar Pino" (toggle de modo de inserção)
+  // Set up the "Add Pin" button (insertion mode toggle)
   _initPinMode();
 
-  // Configura o drop zone e o input de arquivo na sidebar esquerda
+  // Set up the drop zone and file input on the left sidebar
   _initDropZone();
 
-  // Renderiza as sidebars vazias antes de qualquer upload ou adição
+  // Render the empty sidebars before any upload or addition
   _renderAssetSidebar([]);
   _renderPinSidebar([]);
 
-  // Configura o fechamento do modal de preview de imagem:
-  // clicar no backdrop ou no botão ✕ fecha o modal
+  // Set up the image preview modal closing:
+  // clicking the backdrop or the close button dismisses the modal
   const backdrop   = document.getElementById('img-preview-backdrop');
   const closeBtn   = document.getElementById('img-preview-close');
   if (backdrop) backdrop.addEventListener('click', _closeImagePreview);
   if (closeBtn) closeBtn.addEventListener('click',  _closeImagePreview);
 
-  // Tecla ESC também fecha o modal de preview
+  // ESC key also closes the preview modal
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') _closeImagePreview();
   });
 
-  // Carrega todos os PNGs estáticos do AssetLoader (fallback)
+  // Load all static PNGs from AssetLoader (fallback)
   AssetLoader.load().then(() => {
-    // Registra os event listeners dos controles do header
+    // Register event listeners for the header controls
     document.getElementById('btn-generate').addEventListener('click', onGenerateClick);
     document.getElementById('btn-clear').addEventListener('click', onClearClick);
+    document.getElementById('btn-lang').addEventListener('click', onLangToggle);
 
-    // Detecta cliques no canvas para selecionar salas
+    // Detect clicks on the canvas to select rooms
     AppState.canvas.addEventListener('click', onCanvasClick);
 
-    // Rastreia a posição do mousedown para diferenciar clique de drag.
-    // Se o usuário arrastou o mapa (pan), o click handler será ignorado.
+    // Track the mousedown position to differentiate a click from a drag.
+    // If the user dragged the map (pan), the click handler will be ignored.
     AppState.canvas.addEventListener('mousedown', (e) => {
       const rect = AppState.canvas.getBoundingClientRect();
       _mouseDownPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     });
 
-    // Atualiza o canvas ao redimensionar a janela
+    // Update the canvas when the window is resized
     window.addEventListener('resize', onWindowResize);
 
-    // Faz o canvas preencher o contêiner inicialmente
+    // Make the canvas fill the container initially
     onWindowResize();
 
-    // Exibe mensagem de boas-vindas no status do header
-    _setStatus('Adicione imagens na sidebar e clique em "Gerar Mapa".');
+    // Display a welcome message in the header status
+    _setStatus(I18n.t('status.welcome'));
   });
 }
 
 // -----------------------------------------------
 // _initDropZone()
-// Configura o drop zone com todos os event listeners
-// necessários para arrastar arquivos de imagem do
-// computador para o painel de assets.
+// Sets up the drop zone with all the event listeners
+// needed to drag image files from the computer
+// into the assets panel.
 //
-// Suporta duas formas de upload:
-//  1. Arrastar arquivos diretamente para o div#drop-zone
-//  2. Clicar no div para abrir o seletor de arquivo nativo
+// Supports two upload methods:
+//  1. Dragging files directly onto the div#drop-zone
+//  2. Clicking the div to open the native file picker
 // -----------------------------------------------
 function _initDropZone() {
   const dropZone  = document.getElementById('drop-zone');
@@ -131,164 +138,164 @@ function _initDropZone() {
 
   // ---- Drag & drop via mouse ----
 
-  // Previne o comportamento padrão do browser (abrir o arquivo na aba)
-  // e adiciona a classe visual de "arquivo por cima"
+  // Prevent the browser's default behavior (opening the file in the tab)
+  // and add the visual "file hovering" class
   dropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
     e.stopPropagation();
     dropZone.classList.add('drag-over');
   });
 
-  // Remove o destaque quando o arquivo sai da área sem soltar
+  // Remove the highlight when the file leaves the area without being dropped
   dropZone.addEventListener('dragleave', (e) => {
     e.preventDefault();
     e.stopPropagation();
     dropZone.classList.remove('drag-over');
   });
 
-  // Processa os arquivos soltos na zona de drop
+  // Process the files dropped on the drop zone
   dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     e.stopPropagation();
     dropZone.classList.remove('drag-over');
 
-    // Lê os arquivos do evento de drop e envia para o UserAssets
+    // Read the files from the drop event and send them to UserAssets
     const files = Array.from(e.dataTransfer.files);
     _processFiles(files);
   });
 
-  // ---- Seleção via clique ----
+  // ---- Selection via click ----
 
-  // Ao clicar no drop zone, aciona o input[type=file] oculto
+  // Clicking on the drop zone triggers the hidden input[type=file]
   dropZone.addEventListener('click', () => {
     fileInput.click();
   });
 
-  // Processa os arquivos selecionados pelo seletor de arquivo
+  // Process the files selected through the file picker
   fileInput.addEventListener('change', (e) => {
     const files = Array.from(e.target.files);
     _processFiles(files);
 
-    // Limpa o valor do input para permitir selecionar o mesmo arquivo novamente
+    // Clear the input value to allow selecting the same file again
     fileInput.value = '';
   });
 }
 
 // -----------------------------------------------
 // _processFiles(files)
-// Envia um array de Files para o UserAssets.
-// Ignora erros individuais (arquivo inválido) sem travar os demais.
+// Sends an array of Files to UserAssets.
+// Ignores individual errors (invalid file) without blocking the rest.
 //
 // @param {File[]} files
 // -----------------------------------------------
 function _processFiles(files) {
   files.forEach(file => {
     UserAssets.add(file).catch(err => {
-      // Erro silencioso — o aviso já foi logado pelo UserAssets
-      console.warn('[main] Arquivo ignorado:', err.message);
+      // Silent error — the warning was already logged by UserAssets
+      console.warn('[main] File ignored:', err.message);
     });
   });
 }
 
 // -----------------------------------------------
 // _renderAssetSidebar(assets)
-// Redesenha a lista de cards na sidebar esquerda
-// com base no array atual de UserAssets.
+// Redraws the list of cards on the left sidebar
+// based on the current UserAssets array.
 //
-// Cada card exibe:
-//  - Miniatura da imagem
-//  - Nome do arquivo (truncado)
-//  - Seletor de tipo de sala (any/normal/start/end/boss)
-//  - Botão de remover (✕)
+// Each card displays:
+//  - Image thumbnail
+//  - File name (truncated)
+//  - Room type selector (any/normal/start/end/boss)
+//  - Remove button (x)
 //
-// Esta função é passada como callback para UserAssets.init()
-// e chamada automaticamente sempre que o estado mudar.
+// This function is passed as a callback to UserAssets.init()
+// and called automatically whenever the state changes.
 //
-// @param {UserAsset[]} assets  array atual retornado por UserAssets
+// @param {UserAsset[]} assets  current array returned by UserAssets
 // -----------------------------------------------
 function _renderAssetSidebar(assets) {
   const list = document.getElementById('user-asset-list');
   if (!list) return;
 
-  // Limpa a lista anterior
+  // Clear the previous list
   list.innerHTML = '';
 
-  // Sem assets: exibe mensagem de ajuda
+  // No assets: display a help message
   if (assets.length === 0) {
     const hint = document.createElement('p');
     hint.className   = 'ua-empty-hint';
-    hint.textContent = 'Nenhuma imagem carregada.\nArraste arquivos para a área acima.';
+    hint.textContent = I18n.t('asset.emptyHint');
     list.appendChild(hint);
     return;
   }
 
-  // Cria um card para cada asset carregado
+  // Create a card for each loaded asset
   assets.forEach(asset => {
-    // Contêiner do card
+    // Card container
     const card = document.createElement('div');
     card.className      = 'ua-card';
     card.dataset.assetId = asset.id;
 
-    // Miniatura da imagem
+    // Image thumbnail
     const thumb = document.createElement('img');
     thumb.className = 'ua-card-thumb';
     thumb.src       = asset.dataURL;
     thumb.alt       = asset.name;
-    // Clicar na miniatura abre o modal de preview ampliado
+    // Clicking the thumbnail opens the enlarged preview modal
     thumb.style.cursor = 'zoom-in';
     thumb.addEventListener('click', (e) => {
-      e.stopPropagation(); // evita propagar para o card
+      e.stopPropagation(); // prevent propagation to the card
       _openImagePreview(asset.dataURL);
     });
 
-    // Coluna central com nome e seletor de tipo
+    // Center column with name and type selector
     const info = document.createElement('div');
     info.className = 'ua-card-info';
 
-    // Nome do arquivo (truncado via CSS)
+    // File name (truncated via CSS)
     const nameEl = document.createElement('span');
     nameEl.className   = 'ua-card-name';
     nameEl.textContent = asset.name;
-    nameEl.title       = asset.name;  // tooltip com nome completo
+    nameEl.title       = asset.name;  // tooltip with full name
 
-    // Seletor do tipo de sala — define quais salas podem usar esta imagem
+    // Room type selector — defines which rooms can use this image
     const typeSelect = document.createElement('select');
     typeSelect.className = 'ua-type-select';
 
-    // Opções de tipo disponíveis
+    // Available type options
     const typeOptions = [
-      { value: 'any',    label: 'Qualquer sala' },
-      { value: 'normal', label: 'Normal'        },
-      { value: 'start',  label: 'Início'        },
-      { value: 'end',    label: 'Final'         },
-      { value: 'boss',   label: 'Boss'          },
+      { value: 'any',    label: I18n.t('asset.typeAny')    },
+      { value: 'normal', label: I18n.t('asset.typeNormal') },
+      { value: 'start',  label: I18n.t('asset.typeStart')  },
+      { value: 'end',    label: I18n.t('asset.typeEnd')    },
+      { value: 'boss',   label: I18n.t('asset.typeBoss')   },
     ];
 
     typeOptions.forEach(opt => {
       const option       = document.createElement('option');
       option.value       = opt.value;
       option.textContent = opt.label;
-      // Pré-seleciona o tipo atual do asset
+      // Pre-select the current type of the asset
       if (opt.value === asset.type) option.selected = true;
       typeSelect.appendChild(option);
     });
 
-    // Ao mudar o tipo, notifica o UserAssets e atualiza o estado
+    // When the type changes, notify UserAssets and update the state
     typeSelect.addEventListener('change', () => {
       UserAssets.setType(asset.id, typeSelect.value);
     });
 
-    // Botão de remover o asset
+    // Button to remove the asset
     const removeBtn  = document.createElement('button');
     removeBtn.className   = 'ua-remove';
     removeBtn.textContent = '✕';
-    removeBtn.title       = `Remover "${asset.name}"`;
+    removeBtn.title       = I18n.t('asset.removeTitle', asset.name);
 
     removeBtn.addEventListener('click', () => {
       UserAssets.remove(asset.id);
     });
 
-    // Monta o card na ordem: miniatura | info (nome + tipo) | botão ✕
+    // Assemble the card in order: thumbnail | info (name + type) | remove button
     info.appendChild(nameEl);
     info.appendChild(typeSelect);
     card.appendChild(thumb);
@@ -300,65 +307,65 @@ function _renderAssetSidebar(assets) {
 
 // -----------------------------------------------
 // onGenerateClick()
-// Disparada pelo botão "Gerar Mapa" no header.
-// Lê seed e tamanho, gera o mapa e renderiza.
+// Triggered by the "Generate Map" button in the header.
+// Reads seed and size, generates the map, and renders it.
 // -----------------------------------------------
 function onGenerateClick() {
-  // Lê o valor digitado no campo de seed
+  // Read the value entered in the seed field
   const seedInput = document.getElementById('input-seed').value.trim();
 
-  // Se o campo estiver vazio, gera uma seed aleatória legível (ex.: "CAVE-4821")
+  // If the field is empty, generate a readable random seed (e.g., "CAVE-4821")
   const seed = seedInput !== '' ? seedInput : Random.generateSeedString();
 
-  // Atualiza o campo de input com a seed usada (para o usuário ver qual foi usada)
+  // Update the input field with the seed used (so the user sees which one was used)
   document.getElementById('input-seed').value = seed;
 
-  // Lê o tamanho de mapa selecionado no dropdown
+  // Read the map size selected in the dropdown
   const size = document.getElementById('select-size').value;
 
-  // Exibe o overlay de "Gerando mapa..." no canvas durante o processamento
+  // Show the "Generating map..." overlay on the canvas during processing
   _setOverlayVisible(true);
 
-  // Usa setTimeout para permitir que o overlay seja renderizado antes do JS bloquear
-  // (a geração é síncrona e pesada para mapas grandes)
+  // Use setTimeout to allow the overlay to render before JS blocks
+  // (generation is synchronous and heavy for large maps)
   setTimeout(() => {
-    // Gera o mapa com os parâmetros selecionados.
-    // Passa UserAssets para que o gerador use as imagens do usuário
-    // ao atribuir visuais às salas proceduralmente.
+    // Generate the map with the selected parameters.
+    // Pass UserAssets so the generator uses the user's images
+    // when procedurally assigning visuals to rooms.
     AppState.map  = MapGenerator.generate({
       seed,
       size,
-      assets:     AssetLoader,   // fallback para PNGs estáticos
-      userAssets: UserAssets,    // imagens carregadas pelo usuário
+      assets:     AssetLoader,   // fallback for static PNGs
+      userAssets: UserAssets,    // images uploaded by the user
     });
     AppState.seed = seed;
 
-    // Reseta a câmera e centraliza na sala de início do mapa gerado
+    // Reset the camera and center on the starting room of the generated map
     Camera.reset();
     const startRoom = AppState.map.rooms.find(r => r.type === 'start');
     if (startRoom) {
-      // Encontra o centro da sala de início para centralizar a câmera
+      // Find the center of the starting room to center the camera
       const cx = startRoom.x + startRoom.width  / 2;
       const cy = startRoom.y + startRoom.height / 2;
       Camera.centerOn(cx, cy, AppState.canvas.width, AppState.canvas.height);
     }
 
-    // Renderiza o mapa no canvas
+    // Render the map on the canvas
     Renderer.draw(AppState.map);
 
-    // Esconde o overlay de loading
+    // Hide the loading overlay
     _setOverlayVisible(false);
 
-    // Monta informação sobre uso de user assets no status
+    // Build information about user asset usage for the status
     const userAssetCount = UserAssets.getAll().length;
     const assetInfo      = userAssetCount > 0
-      ? ` | ${userAssetCount} imagem(ns) customizada(s)`
+      ? I18n.t('status.customAssets', userAssetCount)
       : '';
 
-    // Atualiza o status no header com seed e quantidade de salas geradas
-    _setStatus(`Seed: ${seed} | Salas: ${AppState.map.rooms.length} | Corredores: ${AppState.map.corridors.length}${assetInfo}`);
+    // Update the header status with seed and number of generated rooms
+    _setStatus(I18n.t('status.generated', seed, AppState.map.rooms.length, AppState.map.corridors.length) + assetInfo);
 
-    // Exibe os dados brutos do mapa no painel de debug
+    // Display the raw map data in the debug panel
     updateDebugPanel({
       seed:        AppState.map.seed,
       size,
@@ -368,125 +375,125 @@ function onGenerateClick() {
       mapHeight:   AppState.map.height,
       userAssets:  userAssetCount,
     });
-  }, 10); // atraso mínimo de 10ms para o browser renderizar o overlay
+  }, 10); // minimum 10ms delay to let the browser render the overlay
 }
 
 // -----------------------------------------------
 // onClearClick()
-// Disparada pelo botão "Limpar" no header.
-// Remove o mapa do estado e limpa o canvas.
-// Os assets do usuário NÃO são removidos ao limpar —
-// o usuário os gerencia diretamente na sidebar.
+// Triggered by the "Clear" button in the header.
+// Removes the map from state and clears the canvas.
+// User assets are NOT removed on clear —
+// the user manages them directly in the sidebar.
 // -----------------------------------------------
 function onClearClick() {
-  // Remove o mapa do estado global
+  // Remove the map from global state
   AppState.map  = null;
   AppState.seed = null;
 
-  // Reseta a câmera para a posição e zoom iniciais
+  // Reset the camera to its initial position and zoom
   Camera.reset();
 
-  // Limpa todos os pinos de anotação (posições perdem sentido sem o mapa)
+  // Clear all annotation pins (positions lose meaning without the map)
   PinManager.clear();
   Renderer.setPins([]);
 
-  // Redesenha (com mapa nulo, apenas mostra o fundo)
+  // Redraw (with a null map, only the background is shown)
   Renderer.draw(null);
 
-  // Limpa o painel de detalhes da sala
-  document.getElementById('room-details').innerHTML = '<p>Clique em uma sala para ver detalhes.</p>';
+  // Clear the room details panel
+  document.getElementById('room-details').innerHTML = `<p>${I18n.t('details.placeholder')}</p>`;
 
-  // Limpa o painel de debug
+  // Clear the debug panel
   document.getElementById('debug-output').textContent = '';
 
-  // Limpa o campo de seed
+  // Clear the seed field
   document.getElementById('input-seed').value = '';
 
-  // Restaura a mensagem padrão no status do header
+  // Restore the default message in the header status
   const userAssetCount = UserAssets.getAll().length;
   _setStatus(userAssetCount > 0
-    ? `${userAssetCount} imagem(ns) carregada(s). Clique em "Gerar Mapa".`
-    : 'Adicione imagens na sidebar e clique em "Gerar Mapa".'
+    ? I18n.t('status.withAssets', userAssetCount)
+    : I18n.t('status.welcome')
   );
 }
 
 // -----------------------------------------------
 // onCanvasClick(event)
-// Detecta qual sala foi clicada no canvas.
-// Converte coordenadas de tela para coordenadas do mapa
-// e verifica hit-test em cada sala.
+// Detects which room was clicked on the canvas.
+// Converts screen coordinates to map coordinates
+// and performs hit-testing on each room.
 // -----------------------------------------------
 function onCanvasClick(event) {
-  // Sem mapa gerado, não há nada para clicar
+  // No generated map, nothing to click
   if (!AppState.map) return;
 
-  // Calcula a posição do clique relativa ao canvas (não à janela inteira)
+  // Calculate the click position relative to the canvas (not the entire window)
   const rect    = AppState.canvas.getBoundingClientRect();
   const screenX = event.clientX - rect.left;
   const screenY = event.clientY - rect.top;
 
-  // ── Detecção de drag: se o mouse se moveu mais de 5px desde o mousedown,
-  // o usuário estava arrastando para mover a câmera — ignorar o click.
+  // -- Drag detection: if the mouse moved more than 5px since mousedown,
+  // the user was dragging to pan the camera — ignore the click.
   if (_mouseDownPos) {
     const dx = screenX - _mouseDownPos.x;
     const dy = screenY - _mouseDownPos.y;
     if (Math.hypot(dx, dy) > 5) return;
   }
 
-  // Converte coordenadas de tela para coordenadas do mapa
-  // levando em conta pan e zoom da câmera
+  // Convert screen coordinates to map coordinates
+  // taking into account camera pan and zoom
   const worldPos = Camera.screenToWorld(screenX, screenY);
 
-  // ── Prioridade 1: verificar clique em pino existente (sempre, em qualquer modo)
-  // O círculo do pino está centrado em (pin.x, pin.y - 12); raio de hit = 10px
+  // -- Priority 1: check click on an existing pin (always, in any mode)
+  // The pin circle is centered at (pin.x, pin.y - 12); hit radius = 10px
   const pins = PinManager.getAll();
   for (const pin of pins) {
     const dist = Math.hypot(worldPos.x - pin.x, worldPos.y - (pin.y - 12));
     if (dist <= 10) {
-      // Encontrou um pino: exibe detalhes no painel direito
+      // Found a pin: display details in the right panel
       _showPinDetails(pin);
-      // Expande a seção de pinos e scrolla até o card
+      // Expand the pins section and scroll to the card
       _expandSection('section-pins');
       _scrollToPinCard(pin.id);
       return;
     }
   }
 
-  // ── Prioridade 2: se o modo pino estiver ativo, inserir novo pino
-  // Pinos só podem ser colocados em corredores!
+  // -- Priority 2: if pin mode is active, insert a new pin
+  // Pins can only be placed on corridors!
   if (AppState._pinMode) {
     if (_isOnCorridor(worldPos)) {
       const pin = PinManager.add(worldPos.x, worldPos.y);
-      // Desativa o modo pino automaticamente após colocar
+      // Automatically deactivate pin mode after placing
       _deactivatePinMode();
-      // Abre a seção de pinos e scrolla até o novo card
+      // Open the pins section and scroll to the new card
       _expandSection('section-pins');
       _scrollToPinCard(pin.id);
     }
     return;
   }
 
-  // ── Prioridade 3: hit-test nas salas do mapa
+  // -- Priority 3: hit-test on the map rooms
   const clickedRoom = AppState.map.rooms.find(room =>
     MathUtils.pointInRect(worldPos, room)
   );
 
   if (clickedRoom) {
-    // Exibe os detalhes da sala clicada no painel direito
+    // Display the clicked room's details in the right panel
     _showRoomDetails(clickedRoom);
 
-    // Aciona o highlight visual da sala no canvas
+    // Trigger the visual highlight of the room on the canvas
     Renderer.highlightRoom(clickedRoom);
   } else {
-    // Clicou em área vazia: limpa a seleção
-    document.getElementById('room-details').innerHTML = '<p>Clique em uma sala para ver detalhes.</p>';
+    // Clicked on empty area: clear the selection
+    document.getElementById('room-details').innerHTML = `<p>${I18n.t('details.placeholder')}</p>`;
     Renderer.highlightRoom(null);
   }
 }
 
 // -----------------------------------------------
 // onWindowResize()
-// Redimensiona o canvas quando a janela muda de tamanho.
+// Resizes the canvas when the window changes size.
 // -----------------------------------------------
 function onWindowResize() {
   Renderer.resizeCanvas();
@@ -494,9 +501,9 @@ function onWindowResize() {
 
 // -----------------------------------------------
 // updateDebugPanel(data)
-// Exibe dados internos formatados no painel #debug-output.
+// Displays formatted internal data in the #debug-output panel.
 //
-// @param {object} data  qualquer objeto serializável
+// @param {object} data  any serializable object
 // -----------------------------------------------
 function updateDebugPanel(data) {
   const formatted = JSON.stringify(data, null, 2);
@@ -505,30 +512,30 @@ function updateDebugPanel(data) {
 
 // -----------------------------------------------
 // _showRoomDetails(room)
-// Exibe as propriedades de uma sala no painel #room-details.
-// Inclui informação sobre a imagem (user asset ou asset estático).
+// Displays a room's properties in the #room-details panel.
+// Includes information about the image (user asset or static asset).
 //
 // @param {Room} room
 // -----------------------------------------------
 function _showRoomDetails(room) {
-  // Determina qual imagem está sendo usada para esta sala
+  // Determine which image is being used for this room
   let imagemInfo;
   if (room.userAsset) {
-    imagemInfo = `${room.userAsset.name} <em>(sua imagem)</em>`;
+    imagemInfo = `${room.userAsset.name} <em>${I18n.t('room.userImage')}</em>`;
   } else if (room.assetKey) {
     imagemInfo = room.assetKey;
   } else {
-    imagemInfo = '— (cor de fallback)';
+    imagemInfo = I18n.t('room.noImage');
   }
 
   const html = `
     <table>
-      <tr><td><strong>ID</strong></td><td>${room.id}</td></tr>
-      <tr><td><strong>Tipo</strong></td><td>${room.type.toUpperCase()}</td></tr>
-      <tr><td><strong>Posição</strong></td><td>x: ${Math.round(room.x)}, y: ${Math.round(room.y)}</td></tr>
-      <tr><td><strong>Tamanho</strong></td><td>${Math.round(room.width)} × ${Math.round(room.height)} px</td></tr>
-      <tr><td><strong>Imagem</strong></td><td>${imagemInfo}</td></tr>
-      <tr><td><strong>Conexões</strong></td><td>${room.connections.join(', ') || 'nenhuma'}</td></tr>
+      <tr><td><strong>${I18n.t('room.id')}</strong></td><td>${room.id}</td></tr>
+      <tr><td><strong>${I18n.t('room.type')}</strong></td><td>${room.type.toUpperCase()}</td></tr>
+      <tr><td><strong>${I18n.t('room.position')}</strong></td><td>x: ${Math.round(room.x)}, y: ${Math.round(room.y)}</td></tr>
+      <tr><td><strong>${I18n.t('room.size')}</strong></td><td>${Math.round(room.width)} × ${Math.round(room.height)} px</td></tr>
+      <tr><td><strong>${I18n.t('room.image')}</strong></td><td>${imagemInfo}</td></tr>
+      <tr><td><strong>${I18n.t('room.connections')}</strong></td><td>${room.connections.join(', ') || I18n.t('room.noConnections')}</td></tr>
     </table>
   `;
 
@@ -537,7 +544,7 @@ function _showRoomDetails(room) {
 
 // -----------------------------------------------
 // _setStatus(message)
-// Atualiza o texto de status no header da aplicação.
+// Updates the status text in the application header.
 // -----------------------------------------------
 function _setStatus(message) {
   const el = document.getElementById('status-text');
@@ -546,7 +553,7 @@ function _setStatus(message) {
 
 // -----------------------------------------------
 // _setOverlayVisible(visible)
-// Exibe ou esconde o overlay de "Gerando mapa..." no canvas.
+// Shows or hides the "Generating map..." overlay on the canvas.
 // -----------------------------------------------
 function _setOverlayVisible(visible) {
   const overlay = document.getElementById('canvas-overlay');
@@ -560,26 +567,65 @@ function _setOverlayVisible(visible) {
 }
 
 // -----------------------------------------------
+// onLangToggle()
+// Switches the UI language between English and Portuguese.
+// Re-translates all static DOM and re-renders dynamic content.
+// -----------------------------------------------
+function onLangToggle() {
+  I18n.toggle();
+  I18n.translateDOM();
+
+  // Re-render dynamic sidebars with new language
+  _renderAssetSidebar(UserAssets.getAll());
+  _renderPinSidebar(PinManager.getAll());
+
+  // Update status text based on current app state
+  if (AppState.map) {
+    const userAssetCount = UserAssets.getAll().length;
+    const assetInfo = userAssetCount > 0
+      ? I18n.t('status.customAssets', userAssetCount)
+      : '';
+    _setStatus(
+      I18n.t('status.generated',
+        AppState.seed,
+        AppState.map.rooms.length,
+        AppState.map.corridors.length
+      ) + assetInfo
+    );
+  } else {
+    const userAssetCount = UserAssets.getAll().length;
+    _setStatus(userAssetCount > 0
+      ? I18n.t('status.withAssets', userAssetCount)
+      : I18n.t('status.welcome')
+    );
+  }
+
+  // Reset right panel to placeholder (no tracking of selected entity)
+  document.getElementById('room-details').innerHTML =
+    `<p>${I18n.t('details.placeholder')}</p>`;
+}
+
+// -----------------------------------------------
 // _openImagePreview(dataURL)
-// Abre o modal de preview ampliado da imagem de asset.
-// Exibido ao clicar no thumbnail de um .ua-card na sidebar.
+// Opens the enlarged image preview modal for an asset.
+// Displayed when clicking the thumbnail of a .ua-card in the sidebar.
 //
-// @param {string} dataURL  base64 data URL da imagem
+// @param {string} dataURL  base64 data URL of the image
 // -----------------------------------------------
 function _openImagePreview(dataURL) {
   const modal = document.getElementById('img-preview-modal');
   const img   = document.getElementById('img-preview-img');
   if (!modal || !img) return;
 
-  // Define a imagem e exibe o modal removendo a classe .hidden
+  // Set the image and show the modal by removing the .hidden class
   img.src = dataURL;
   modal.classList.remove('hidden');
 }
 
 // -----------------------------------------------
 // _closeImagePreview()
-// Fecha o modal de preview e limpa a imagem exibida.
-// Chamada ao clicar no backdrop, no botão ✕ ou ao pressionar ESC.
+// Closes the preview modal and clears the displayed image.
+// Called when clicking the backdrop, the close button, or pressing ESC.
 // -----------------------------------------------
 function _closeImagePreview() {
   const modal = document.getElementById('img-preview-modal');
@@ -587,14 +633,14 @@ function _closeImagePreview() {
   if (!modal) return;
 
   modal.classList.add('hidden');
-  if (img) img.src = ''; // libera a referência para facilitar garbage collection
+  if (img) img.src = ''; // release the reference to facilitate garbage collection
 }
 
 // -----------------------------------------------
 // _initSidebarSections()
-// Configura o sistema de seções retráteis (accordion) da sidebar.
-// Cada botão .sidebar-section-header colapsa/expande seu conteúdo.
-// Múltiplas seções podem estar abertas simultaneamente.
+// Sets up the collapsible sections (accordion) system for the sidebar.
+// Each .sidebar-section-header button collapses/expands its content.
+// Multiple sections can be open simultaneously.
 // -----------------------------------------------
 function _initSidebarSections() {
   const headers = document.querySelectorAll('.sidebar-section-header');
@@ -608,17 +654,17 @@ function _initSidebarSections() {
       const isCollapsed = content.classList.contains('collapsed');
 
       if (isCollapsed) {
-        // Expandir: remove .collapsed e marca o header como ativo
+        // Expand: remove .collapsed and mark the header as active
         content.classList.remove('collapsed');
         header.classList.add('active');
-        // Atualiza a seta para ▼ (aberto)
+        // Update the arrow to down-pointing (open)
         const arrow = header.querySelector('.section-arrow');
         if (arrow) arrow.innerHTML = '&#9660;';
       } else {
-        // Colapsar: adiciona .collapsed e desmarca o header
+        // Collapse: add .collapsed and unmark the header
         content.classList.add('collapsed');
         header.classList.remove('active');
-        // Atualiza a seta para ▶ (fechado)
+        // Update the arrow to right-pointing (closed)
         const arrow = header.querySelector('.section-arrow');
         if (arrow) arrow.innerHTML = '&#9654;';
       }
@@ -628,16 +674,16 @@ function _initSidebarSections() {
 
 // -----------------------------------------------
 // _expandSection(sectionId)
-// Expande programaticamente uma seção da sidebar.
-// Se a seção já estiver aberta, não faz nada.
+// Programmatically expands a sidebar section.
+// If the section is already open, does nothing.
 //
-// @param {string} sectionId  valor data-section / id do conteúdo
+// @param {string} sectionId  data-section value / content element id
 // -----------------------------------------------
 function _expandSection(sectionId) {
   const content = document.getElementById(sectionId);
   if (!content) return;
 
-  // Só precisa agir se estiver colapsado
+  // Only needs to act if currently collapsed
   if (content.classList.contains('collapsed')) {
     const header = document.querySelector(`.sidebar-section-header[data-section="${sectionId}"]`);
     if (header) header.click();
@@ -646,23 +692,23 @@ function _expandSection(sectionId) {
 
 // -----------------------------------------------
 // _initPinMode()
-// Configura o botão #btn-pin-mode para alternar o modo de
-// inserção de pinos no canvas.
+// Sets up the #btn-pin-mode button to toggle the
+// pin insertion mode on the canvas.
 //
-// Quando ativo:
+// When active:
 //  - AppState._pinMode = true
-//  - Botão recebe classe .active (destaque visual)
-//  - Canvas recebe classe .pin-mode (cursor crosshair via CSS)
+//  - Button receives the .active class (visual highlight)
+//  - Canvas receives the .pin-mode class (crosshair cursor via CSS)
 // -----------------------------------------------
 function _initPinMode() {
   const btn = document.getElementById('btn-pin-mode');
   if (!btn) return;
 
   btn.addEventListener('click', () => {
-    // Alterna o estado do modo pino
+    // Toggle pin mode state
     AppState._pinMode = !AppState._pinMode;
 
-    // Sincroniza as classes visuais com o novo estado
+    // Sync the visual classes with the new state
     btn.classList.toggle('active', AppState._pinMode);
     AppState.canvas.classList.toggle('pin-mode', AppState._pinMode);
   });
@@ -670,16 +716,16 @@ function _initPinMode() {
 
 // -----------------------------------------------
 // _renderPinSidebar(pins)
-// Redesenha a lista de cards de pinos na seção "Pinos" da sidebar.
-// Passada como callback para PinManager.init() e chamada em
+// Redraws the list of pin cards in the "Pins" section of the sidebar.
+// Passed as a callback to PinManager.init() and called on
 // add / remove / clear / toggleCompleted.
 //
-// Cada card tem dois modos:
-//  - VISUALIZAÇÃO (padrão): label + nota como texto, botões editar e excluir
-//  - EDIÇÃO: label input + nota textarea, botões confirmar e descartar
+// Each card has two modes:
+//  - VIEW (default): label + note as text, edit and delete buttons
+//  - EDIT: label input + note textarea, confirm and discard buttons
 //
-// A opção de marcar como concluído NÃO aparece aqui —
-// ela existe apenas no painel de detalhes da sidebar direita.
+// The option to mark as completed does NOT appear here —
+// it only exists in the details panel of the right sidebar.
 //
 // @param {Array<{id, x, y, label, note, completed}>} pins
 // -----------------------------------------------
@@ -689,11 +735,11 @@ function _renderPinSidebar(pins) {
 
   list.innerHTML = '';
 
-  // Sem pinos: exibe mensagem orientativa
+  // No pins: display a guidance message
   if (pins.length === 0) {
     const hint = document.createElement('p');
     hint.className   = 'pin-empty-hint';
-    hint.textContent = 'Nenhum pino adicionado.\nClique em "Adicionar Pino" e depois no mapa.';
+    hint.textContent = I18n.t('pin.emptyHint');
     list.appendChild(hint);
     return;
   }
@@ -705,91 +751,91 @@ function _renderPinSidebar(pins) {
     card.dataset.pinId   = pin.id;
 
     // ════════════════════════════════════════════
-    // MODO VISUALIZAÇÃO — visível por padrão
+    // VIEW MODE — visible by default
     // ════════════════════════════════════════════
     const viewDiv = document.createElement('div');
     viewDiv.className = 'pin-view';
 
-    // Header: ícone + rótulo em texto + botão editar + botão excluir
+    // Header: icon + label text + edit button + delete button
     const viewHeader = document.createElement('div');
     viewHeader.className = 'pin-card-header';
 
     const viewIcon = document.createElement('span');
     viewIcon.textContent = '📍';
 
-    // Rótulo do pino como texto (não editável)
+    // Pin label as text (non-editable)
     const labelText = document.createElement('span');
     labelText.className   = 'pin-label-text';
     labelText.textContent = pin.label;
 
-    // Botão editar (✏️) — alterna para modo edição
+    // Edit button — switches to edit mode
     const editBtn = document.createElement('button');
     editBtn.className   = 'pin-edit-btn';
     editBtn.textContent = '✏️';
-    editBtn.title       = 'Editar pino';
+    editBtn.title       = I18n.t('pin.editTitle');
 
-    // Botão excluir (🗑️) — remove o pino permanentemente
+    // Delete button — permanently removes the pin
     const trashBtn = document.createElement('button');
     trashBtn.className   = 'pin-trash-btn';
     trashBtn.textContent = '🗑️';
-    trashBtn.title       = 'Excluir pino';
+    trashBtn.title       = I18n.t('pin.trashTitle');
 
     viewHeader.appendChild(viewIcon);
     viewHeader.appendChild(labelText);
     viewHeader.appendChild(editBtn);
     viewHeader.appendChild(trashBtn);
 
-    // Texto da anotação (somente leitura)
+    // Annotation text (read-only)
     const notePreview = document.createElement('p');
     notePreview.className   = 'pin-note-preview';
-    notePreview.textContent = pin.note || '(sem anotação)';
+    notePreview.textContent = pin.note || I18n.t('pin.noNote');
 
     viewDiv.appendChild(viewHeader);
     viewDiv.appendChild(notePreview);
 
     // ════════════════════════════════════════════
-    // MODO EDIÇÃO — oculto por padrão
+    // EDIT MODE — hidden by default
     // ════════════════════════════════════════════
     const editDiv = document.createElement('div');
     editDiv.className     = 'pin-edit-mode';
     editDiv.style.display = 'none';
 
-    // Header: ícone + input de rótulo + botão confirmar + botão descartar
+    // Header: icon + label input + confirm button + discard button
     const editHeader = document.createElement('div');
     editHeader.className = 'pin-card-header';
 
     const editIcon = document.createElement('span');
     editIcon.textContent = '📍';
 
-    // Input do rótulo — editável durante o modo edição
+    // Label input — editable during edit mode
     const labelInput = document.createElement('input');
     labelInput.type        = 'text';
     labelInput.className   = 'pin-label-input';
     labelInput.value       = pin.label;
-    labelInput.placeholder = 'Rótulo...';
+    labelInput.placeholder = I18n.t('pin.labelPlaceholder');
 
-    // Botão confirmar (✓) — salva as alterações de texto
+    // Confirm button — saves the text changes
     const confirmBtn = document.createElement('button');
     confirmBtn.className   = 'pin-confirm-btn';
     confirmBtn.textContent = '✓';
-    confirmBtn.title       = 'Confirmar edição';
+    confirmBtn.title       = I18n.t('pin.confirmTitle');
 
-    // Botão descartar (🗑️) — cancela e reverte as alterações
+    // Discard button — cancels and reverts the changes
     const discardBtn = document.createElement('button');
     discardBtn.className   = 'pin-discard-btn';
     discardBtn.textContent = '🗑️';
-    discardBtn.title       = 'Descartar alterações';
+    discardBtn.title       = I18n.t('pin.discardTitle');
 
     editHeader.appendChild(editIcon);
     editHeader.appendChild(labelInput);
     editHeader.appendChild(confirmBtn);
     editHeader.appendChild(discardBtn);
 
-    // Textarea de anotação — editável durante o modo edição
+    // Note textarea — editable during edit mode
     const noteArea = document.createElement('textarea');
     noteArea.className   = 'pin-note-input';
     noteArea.value       = pin.note;
-    noteArea.placeholder = 'Anotações (obstáculos, eventos, histórias...)';
+    noteArea.placeholder = I18n.t('pin.notePlaceholder');
     noteArea.rows        = 3;
 
     editDiv.appendChild(editHeader);
@@ -799,50 +845,50 @@ function _renderPinSidebar(pins) {
     // EVENT HANDLERS
     // ════════════════════════════════════════════
 
-    // ✏️ Entrar no modo edição
+    // Enter edit mode
     editBtn.addEventListener('click', () => {
-      // Preenche os inputs com os valores atuais do pino
+      // Populate inputs with the pin's current values
       labelInput.value = pin.label;
       noteArea.value   = pin.note;
-      // Alterna visibilidade
+      // Toggle visibility
       viewDiv.style.display = 'none';
       editDiv.style.display = '';
       labelInput.focus();
     });
 
-    // ✓ Confirmar edição — salva o texto e volta ao modo visualização
+    // Confirm edit — save the text and return to view mode
     confirmBtn.addEventListener('click', () => {
-      // Salva as alterações silenciosamente (sem re-render completo)
+      // Save the changes silently (without a full re-render)
       PinManager.updateSilent(pin.id, {
         label: labelInput.value,
         note:  noteArea.value,
       });
-      // Atualiza o texto na view diretamente (sem re-render)
+      // Update the text in the view directly (without re-render)
       labelText.textContent   = labelInput.value;
-      notePreview.textContent = noteArea.value || '(sem anotação)';
-      // Volta ao modo visualização
+      notePreview.textContent = noteArea.value || I18n.t('pin.noNote');
+      // Return to view mode
       viewDiv.style.display = '';
       editDiv.style.display = 'none';
-      // Redesenha o canvas para refletir o rótulo atualizado
+      // Redraw the canvas to reflect the updated label
       Renderer.redraw();
     });
 
-    // 🗑️ Descartar edição — reverte os inputs e volta ao modo visualização
+    // Discard edit — revert the inputs and return to view mode
     discardBtn.addEventListener('click', () => {
-      // Reverte para os valores originais
+      // Revert to the original values
       labelInput.value = pin.label;
       noteArea.value   = pin.note;
-      // Volta ao modo visualização
+      // Return to view mode
       viewDiv.style.display = '';
       editDiv.style.display = 'none';
     });
 
-    // 🗑️ Excluir pino permanentemente
+    // Delete pin permanently
     trashBtn.addEventListener('click', () => {
-      PinManager.remove(pin.id);  // dispara _notify → re-render sidebar + canvas
+      PinManager.remove(pin.id);  // triggers _notify → re-render sidebar + canvas
     });
 
-    // Monta o card com ambos os modos
+    // Assemble the card with both modes
     card.appendChild(viewDiv);
     card.appendChild(editDiv);
     list.appendChild(card);
@@ -851,29 +897,28 @@ function _renderPinSidebar(pins) {
 
 // -----------------------------------------------
 // _scrollToPinCard(id)
-// Rola a sidebar até o card do pino indicado e
-// aplica um destaque temporário de 1.5s.
+// Scrolls the sidebar to the indicated pin's card and
+// applies a temporary highlight for 1.5 seconds.
 //
-// @param {number} id  ID do pino (PinManager)
+// @param {number} id  Pin ID (PinManager)
 // -----------------------------------------------
 function _scrollToPinCard(id) {
   const card = document.querySelector(`.pin-card[data-pin-id="${id}"]`);
   if (!card) return;
 
-  // Rola suavemente até o card ficar visível na sidebar
+  // Smoothly scroll until the card is visible in the sidebar
   card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-  // Aplica a classe .selected para o destaque visual temporário
+  // Apply the .selected class for temporary visual highlight
   card.classList.add('selected');
   setTimeout(() => card.classList.remove('selected'), 1500);
 }
 
 // -----------------------------------------------
 // _isOnCorridor(worldPos)
-// Verifica se um ponto em coordenadas de mundo está
-// dentro de algum segmento de corredor do mapa atual.
-// Usado para restringir a colocação de pinos apenas
-// sobre corredores.
+// Checks whether a point in world coordinates lies
+// within any corridor segment of the current map.
+// Used to restrict pin placement to corridors only.
 //
 // @param {{x:number, y:number}} worldPos
 // @returns {boolean}
@@ -881,8 +926,8 @@ function _scrollToPinCard(id) {
 function _isOnCorridor(worldPos) {
   if (!AppState.map || !AppState.map.corridors) return false;
 
-  // Margem de hit um pouco maior que a metade visual do corredor
-  // para facilitar o clique (corridorWidth padrão = 16px → halfW = 10px)
+  // Hit margin slightly larger than half the visual corridor width
+  // to make clicking easier (default corridorWidth = 16px -> halfW = 10px)
   const HALF_W = 10;
 
   for (const corridor of AppState.map.corridors) {
@@ -893,7 +938,7 @@ function _isOnCorridor(worldPos) {
       const a = pts[i];
       const b = pts[i + 1];
 
-      // AABB (bounding box) do segmento expandida pela margem
+      // AABB (bounding box) of the segment expanded by the margin
       const minX = Math.min(a.x, b.x) - HALF_W;
       const maxX = Math.max(a.x, b.x) + HALF_W;
       const minY = Math.min(a.y, b.y) - HALF_W;
@@ -910,9 +955,9 @@ function _isOnCorridor(worldPos) {
 
 // -----------------------------------------------
 // _deactivatePinMode()
-// Desativa o modo de inserção de pinos.
-// Chamada automaticamente após colocar um pino,
-// ou manualmente ao clicar o botão toggle novamente.
+// Deactivates the pin insertion mode.
+// Called automatically after placing a pin,
+// or manually when clicking the toggle button again.
 // -----------------------------------------------
 function _deactivatePinMode() {
   AppState._pinMode = false;
@@ -923,15 +968,15 @@ function _deactivatePinMode() {
 
 // -----------------------------------------------
 // _showPinDetails(pin)
-// Exibe as propriedades de um pino no painel #room-details
-// (sidebar direita). Inclui um botão para marcar/desmarcar
-// o pino como concluído.
+// Displays a pin's properties in the #room-details panel
+// (right sidebar). Includes a button to mark/unmark
+// the pin as completed.
 //
 // @param {{id, x, y, label, note, completed}} pin
 // -----------------------------------------------
 function _showPinDetails(pin) {
-  const statusText = pin.completed ? 'Concluído ✓' : 'Pendente';
-  const btnLabel   = pin.completed ? 'Desmarcar concluído' : 'Marcar como concluído';
+  const statusText = pin.completed ? I18n.t('pin.completed') : I18n.t('pin.pending');
+  const btnLabel   = pin.completed ? I18n.t('pin.unmarkCompleted') : I18n.t('pin.markCompleted');
   const btnClass   = pin.completed ? 'pin-status-btn completed' : 'pin-status-btn';
 
   const noteHtml = pin.note
@@ -940,22 +985,22 @@ function _showPinDetails(pin) {
 
   const html = `
     <table>
-      <tr><td><strong>Pino</strong></td><td>${pin.label}</td></tr>
-      <tr><td><strong>Posição</strong></td><td>x: ${Math.round(pin.x)}, y: ${Math.round(pin.y)}</td></tr>
-      <tr><td><strong>Nota</strong></td><td>${noteHtml}</td></tr>
-      <tr><td><strong>Status</strong></td><td>${statusText}</td></tr>
+      <tr><td><strong>${I18n.t('pin.label')}</strong></td><td>${pin.label}</td></tr>
+      <tr><td><strong>${I18n.t('pin.position')}</strong></td><td>x: ${Math.round(pin.x)}, y: ${Math.round(pin.y)}</td></tr>
+      <tr><td><strong>${I18n.t('pin.note')}</strong></td><td>${noteHtml}</td></tr>
+      <tr><td><strong>${I18n.t('pin.status')}</strong></td><td>${statusText}</td></tr>
     </table>
     <button class="${btnClass}" data-pin-id="${pin.id}">${btnLabel}</button>
   `;
 
   document.getElementById('room-details').innerHTML = html;
 
-  // Registra o listener no botão de status recém-criado
+  // Register the listener on the newly created status button
   const statusBtn = document.querySelector('.pin-status-btn');
   if (statusBtn) {
     statusBtn.addEventListener('click', () => {
       PinManager.toggleCompleted(pin.id);
-      // Atualiza o painel com o novo estado do pino
+      // Update the panel with the pin's new state
       const updatedPin = PinManager.getAll().find(p => p.id === pin.id);
       if (updatedPin) _showPinDetails(updatedPin);
     });
@@ -963,6 +1008,6 @@ function _showPinDetails(pin) {
 }
 
 // -----------------------------------------------
-// Inicializar quando o DOM estiver completamente carregado
+// Initialize when the DOM is fully loaded
 // -----------------------------------------------
 document.addEventListener('DOMContentLoaded', init);

@@ -1,56 +1,56 @@
 /**
- * PinManager — gerencia pinos de anotação colocados no canvas.
+ * PinManager — manages annotation pins placed on the canvas.
  *
- * Cada pino tem:
- *   id        {number}   — identificador único auto-incrementado
- *   x         {number}   — coordenada X no espaço do mundo (world coords)
- *   y         {number}   — coordenada Y no espaço do mundo (a ponta do pino)
- *   label     {string}   — rótulo curto exibido no canvas acima do pino
- *   note      {string}   — anotação longa visível apenas na sidebar
- *   completed {boolean}  — se true, o pino fica verde (obstáculo já superado)
+ * Each pin has:
+ *   id        {number}   — unique auto-incremented identifier
+ *   x         {number}   — X coordinate in world space (world coords)
+ *   y         {number}   — Y coordinate in world space (pin tip)
+ *   label     {string}   — short label displayed on the canvas above the pin
+ *   note      {string}   — long annotation visible only in the sidebar
+ *   completed {boolean}  — if true, the pin turns green (obstacle already overcome)
  *
- * Padrão IIFE idêntico ao de userAssets.js — sem bundler, sem dependências.
+ * IIFE pattern identical to userAssets.js — no bundler, no dependencies.
  */
 const PinManager = (() => {
 
   /* ────────────────────────────────────────────────────────────────────────
-     Estado interno
+     Internal state
   ──────────────────────────────────────────────────────────────────────── */
 
   /** @type {Array<{id:number, x:number, y:number, label:string, note:string, completed:boolean}>} */
   let _pins = [];
 
-  /** Contador para gerar IDs únicos sempre crescentes */
+  /** Counter to generate always-increasing unique IDs */
   let _nextId = 0;
 
   /**
-   * Callback registrado por main.js; chamado toda vez que a lista de pinos
-   * muda (add / remove / clear / toggleCompleted).  Recebe uma cópia rasa do array.
+   * Callback registered by main.js; called whenever the pin list
+   * changes (add / remove / clear / toggleCompleted).  Receives a shallow copy of the array.
    * @type {Function|null}
    */
   let _onChangeCb = null;
 
   /* ────────────────────────────────────────────────────────────────────────
-     API pública
+     Public API
   ──────────────────────────────────────────────────────────────────────── */
 
   /**
-   * Registra um callback que será invocado sempre que a lista de pinos
-   * sofrer uma mudança estrutural (add / remove / clear / toggleCompleted).
+   * Registers a callback that will be invoked whenever the pin list
+   * undergoes a structural change (add / remove / clear / toggleCompleted).
    *
-   * @param {function(Array)} onChangeCb - Recebe uma cópia do array de pinos.
+   * @param {function(Array)} onChangeCb - Receives a copy of the pin array.
    */
   function init(onChangeCb) {
     _onChangeCb = typeof onChangeCb === 'function' ? onChangeCb : () => {};
   }
 
   /**
-   * Cria e adiciona um novo pino nas coordenadas de mundo informadas.
-   * Dispara o callback de mudança.
+   * Creates and adds a new pin at the given world coordinates.
+   * Fires the change callback.
    *
-   * @param {number} x - Coordenada X no espaço do mundo.
-   * @param {number} y - Coordenada Y no espaço do mundo (ponta do pino).
-   * @returns {{id, x, y, label, note, completed}} O pino recém-criado.
+   * @param {number} x - X coordinate in world space.
+   * @param {number} y - Y coordinate in world space (pin tip).
+   * @returns {{id, x, y, label, note, completed}} The newly created pin.
    */
   function add(x, y) {
     const id = _nextId++;
@@ -58,7 +58,7 @@ const PinManager = (() => {
       id,
       x,
       y,
-      label:     `Pino ${id + 1}`,
+      label:     I18n.t('pin.defaultLabel', id + 1),
       note:      '',
       completed: false,
     };
@@ -68,9 +68,9 @@ const PinManager = (() => {
   }
 
   /**
-   * Remove o pino com o id informado e dispara o callback.
+   * Removes the pin with the given id and fires the callback.
    *
-   * @param {number} id - ID do pino a remover.
+   * @param {number} id - ID of the pin to remove.
    */
   function remove(id) {
     _pins = _pins.filter(p => p.id !== id);
@@ -78,9 +78,9 @@ const PinManager = (() => {
   }
 
   /**
-   * Atualiza o rótulo e/ou nota de um pino e dispara o callback de mudança.
-   * Use este método apenas por código (não durante digitação do usuário).
-   * Para atualizações silenciosas durante digitação, use `updateSilent()`.
+   * Updates the label and/or note of a pin and fires the change callback.
+   * Use this method only from code (not during user typing).
+   * For silent updates during typing, use `updateSilent()`.
    *
    * @param {number} id
    * @param {{ label?: string, note?: string }} data
@@ -94,10 +94,10 @@ const PinManager = (() => {
   }
 
   /**
-   * Atualiza o rótulo e/ou nota de um pino SEM disparar o callback.
-   * Usado pelos handlers de digitação (input event) para evitar que o DOM da
-   * sidebar seja re-renderizado enquanto o usuário está digitando — o que
-   * destruiria o foco no campo de texto.
+   * Updates the label and/or note of a pin WITHOUT firing the callback.
+   * Used by typing handlers (input event) to prevent the sidebar DOM
+   * from being re-rendered while the user is typing — which would
+   * destroy focus on the text field.
    *
    * @param {number} id
    * @param {{ label?: string, note?: string }} data
@@ -107,14 +107,14 @@ const PinManager = (() => {
     if (!pin) return;
     if (label !== undefined) pin.label = label;
     if (note  !== undefined) pin.note  = note;
-    // _notify() intencionalmente omitido
+    // _notify() intentionally omitted
   }
 
   /**
-   * Alterna o estado de conclusão (completed) de um pino.
-   * Pinos concluídos ficam verdes no canvas, indicando que o
-   * obstáculo/evento já foi superado pelos jogadores.
-   * Dispara o callback de mudança.
+   * Toggles the completed state of a pin.
+   * Completed pins turn green on the canvas, indicating that the
+   * obstacle/event has already been overcome by the players.
+   * Fires the change callback.
    *
    * @param {number} id
    */
@@ -126,7 +126,7 @@ const PinManager = (() => {
   }
 
   /**
-   * Retorna uma cópia rasa do array de pinos.
+   * Returns a shallow copy of the pin array.
    *
    * @returns {Array<{id, x, y, label, note, completed}>}
    */
@@ -135,8 +135,8 @@ const PinManager = (() => {
   }
 
   /**
-   * Remove todos os pinos e dispara o callback.
-   * Chamado quando o mapa é limpo (onClearClick).
+   * Removes all pins and fires the callback.
+   * Called when the map is cleared (onClearClick).
    */
   function clear() {
     _pins = [];
@@ -144,19 +144,19 @@ const PinManager = (() => {
   }
 
   /* ────────────────────────────────────────────────────────────────────────
-     Interno
+     Internal
   ──────────────────────────────────────────────────────────────────────── */
 
   /**
-   * Invoca o callback registrado com uma cópia rasa da lista atual.
-   * Sempre passa uma cópia para evitar mutações acidentais pelo consumidor.
+   * Invokes the registered callback with a shallow copy of the current list.
+   * Always passes a copy to prevent accidental mutations by the consumer.
    */
   function _notify() {
     if (_onChangeCb) _onChangeCb([..._pins]);
   }
 
   /* ────────────────────────────────────────────────────────────────────────
-     Exportações
+     Exports
   ──────────────────────────────────────────────────────────────────────── */
 
   return { init, add, remove, update, updateSilent, toggleCompleted, getAll, clear };

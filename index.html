@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,8 +9,8 @@
 <body>
 
   <!-- =============================================
-       HEADER — barra de navegação principal
-       Contém: logo, controles do mapa, status
+       HEADER — main navigation bar
+       Contains: logo, map controls, status
   ============================================= -->
   <header id="app-header">
     <div class="header-logo">
@@ -19,63 +19,60 @@
     </div>
 
     <nav class="header-controls">
-      <!-- Botão para gerar novo mapa -->
-      <button id="btn-generate">Gerar Mapa</button>
+      <button id="btn-generate" data-i18n="header.generate">Generate Map</button>
 
-      <!-- Botão para limpar o canvas -->
-      <button id="btn-clear">Limpar</button>
+      <button id="btn-clear" data-i18n="header.clear">Clear</button>
 
-      <!-- Seed manual (opcional) -->
-      <input type="text" id="input-seed" placeholder="Seed (opcional)" />
+      <input type="text" id="input-seed" placeholder="Seed (optional)" data-i18n-placeholder="header.seedPlaceholder" />
 
-      <!-- Seletor de tamanho do mapa -->
       <select id="select-size">
-        <option value="small">Pequeno</option>
-        <option value="medium" selected>Médio</option>
-        <option value="large">Grande</option>
+        <option value="small" data-i18n="header.sizeSmall">Small</option>
+        <option value="medium" selected data-i18n="header.sizeMedium">Medium</option>
+        <option value="large" data-i18n="header.sizeLarge">Large</option>
       </select>
+
+      <button id="btn-lang" data-i18n="header.langToggle">PT-BR</button>
     </nav>
 
     <div class="header-status">
-      <!-- Exibe informações sobre o mapa atual: seed, nº de salas, etc. -->
-      <span id="status-text">Nenhum mapa gerado.</span>
+      <span id="status-text" data-i18n="header.noMap">No map generated.</span>
     </div>
   </header>
 
   <!-- =============================================
-       LAYOUT PRINCIPAL — sidebar + canvas
+       MAIN LAYOUT — sidebar + canvas
   ============================================= -->
   <main id="app-main">
 
     <!-- -------------------------------------------
-         SIDEBAR ESQUERDA — assets do usuário
-         O usuário arrasta imagens do computador para
-         o drop-zone; cada imagem recebe um tipo de sala.
+         LEFT SIDEBAR — user assets
+         The user drags images from their computer to
+         the drop-zone; each image is assigned a room type.
     ------------------------------------------- -->
     <aside id="panel-assets">
 
-      <!-- Seção: Imagens de sala -->
+      <!-- Section: Room images -->
       <div class="sidebar-section">
         <button class="sidebar-section-header active" data-section="section-assets">
-          <span class="section-arrow">&#9660;</span> Imagens
+          <span class="section-arrow">&#9660;</span> <span data-i18n="sidebar.images">Images</span>
         </button>
         <div id="section-assets" class="sidebar-section-content">
           <div id="drop-zone">
             <span class="drop-icon">+</span>
-            <span>Arraste imagens aqui<br/>ou clique para selecionar</span>
+            <span data-i18n-html="dropzone.text">Drag images here<br/>or click to select</span>
             <input type="file" id="file-input" accept="image/*" multiple hidden />
           </div>
           <div id="user-asset-list"></div>
         </div>
       </div>
 
-      <!-- Seção: Pinos de anotação -->
+      <!-- Section: Annotation pins -->
       <div class="sidebar-section">
         <button class="sidebar-section-header" data-section="section-pins">
-          <span class="section-arrow">&#9654;</span> Pinos
+          <span class="section-arrow">&#9654;</span> <span data-i18n="sidebar.pins">Pins</span>
         </button>
         <div id="section-pins" class="sidebar-section-content collapsed">
-          <button id="btn-pin-mode">📍 Adicionar Pino</button>
+          <button id="btn-pin-mode" data-i18n="pin.addButton">📍 Add Pin</button>
           <div id="pin-list"></div>
         </div>
       </div>
@@ -83,33 +80,31 @@
     </aside>
 
     <!-- -------------------------------------------
-         CANVAS — área de renderização do mapa
+         CANVAS — map rendering area
     ------------------------------------------- -->
     <section id="canvas-wrapper">
       <canvas id="map-canvas"></canvas>
 
-      <!-- Overlay de loading enquanto gera -->
+      <!-- Loading overlay while generating -->
       <div id="canvas-overlay" class="hidden">
-        <span>Gerando mapa...</span>
+        <span data-i18n="overlay.generating">Generating map...</span>
       </div>
     </section>
 
     <!-- -------------------------------------------
-         SIDEBAR DIREITA — propriedades / debug
+         RIGHT SIDEBAR — properties / debug
     ------------------------------------------- -->
     <aside id="panel-info">
-      <h2>Detalhes</h2>
+      <h2 data-i18n="details.title">Details</h2>
 
-      <!-- Exibe propriedades da sala clicada no canvas -->
       <div id="room-details">
-        <p>Clique em uma sala para ver detalhes.</p>
+        <p data-i18n="details.placeholder">Click a room to see details.</p>
       </div>
 
       <hr />
 
-      <!-- Painel de debug — exibe o estado interno do mapa -->
       <div id="debug-panel">
-        <h3>Debug</h3>
+        <h3 data-i18n="debug.title">Debug</h3>
         <pre id="debug-output"></pre>
       </div>
     </aside>
@@ -117,12 +112,13 @@
   </main>
 
   <!-- =============================================
-       SCRIPTS — ordem importa!
-       1. Utilitários
-       2. Core (geração)
-       3. Renderização
-       4. Main (ponto de entrada)
+       SCRIPTS — order matters!
+       1. Utilities
+       2. Core (generation)
+       3. Rendering
+       4. Main (entry point)
   ============================================= -->
+  <script src="src/i18n.js"></script>
   <script src="src/utils/random.js"></script>
   <script src="src/utils/math.js"></script>
   <script src="src/core/assetLoader.js"></script>
@@ -134,17 +130,17 @@
   <script src="src/render/camera.js"></script>
   <script src="src/main.js"></script>
   <!-- =============================================
-       MODAL — preview ampliado de imagem de asset
-       Clicando no thumbnail de um .ua-card, o usuário
-       vê a imagem em tamanho grande.
+       MODAL — enlarged asset image preview
+       Clicking on a .ua-card thumbnail, the user
+       sees the image at full size.
   ============================================= -->
   <div id="img-preview-modal" class="hidden">
-    <!-- Fundo escuro — fechar ao clicar -->
+    <!-- Dark background — click to close -->
     <div id="img-preview-backdrop"></div>
-    <!-- Container da imagem -->
+    <!-- Image container -->
     <div id="img-preview-container">
       <button id="img-preview-close">✕</button>
-      <img id="img-preview-img" src="" alt="Preview da imagem" />
+      <img id="img-preview-img" src="" alt="Image preview" data-i18n-alt="preview.alt" />
     </div>
   </div>
 

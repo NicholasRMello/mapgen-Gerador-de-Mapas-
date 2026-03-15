@@ -1,122 +1,122 @@
 /**
- * renderer.js — Renderização do mapa no Canvas 2D
+ * renderer.js — Map rendering on Canvas 2D
  *
- * Responsabilidades:
- *  - Desenhar corredores (retângulos entre centros das salas)
- *  - Desenhar salas (PNGs via drawImage ou fallback colorido)
- *  - Aplicar transformações da câmera (pan + zoom)
- *  - Destacar salas especiais com ícones e bordas coloridas
+ * Responsibilities:
+ *  - Draw corridors (rectangles between room centers)
+ *  - Draw rooms (PNGs via drawImage or colored fallback)
+ *  - Apply camera transformations (pan + zoom)
+ *  - Highlight special rooms with icons and colored borders
  *
- * Fluxo de desenho (painter's algorithm — fundo → frente):
- *  1. Limpar canvas com cor de fundo
- *  2. Aplicar transformação da câmera (Camera.apply)
- *  3. Desenhar background com grid de pontos
- *  4. Desenhar corredores (abaixo das salas)
- *  5. Desenhar salas (PNGs ou retângulos de fallback)
- *  6. Desenhar overlays (ícones de início/fim/boss, highlight de seleção)
- *  7. Desenhar pinos de anotação (acima de tudo)
- *  8. Restaurar transformação (Camera.restore)
+ * Drawing flow (painter's algorithm — back → front):
+ *  1. Clear canvas with background color
+ *  2. Apply camera transformation (Camera.apply)
+ *  3. Draw background with dot grid
+ *  4. Draw corridors (below rooms)
+ *  5. Draw rooms (PNGs or fallback rectangles)
+ *  6. Draw overlays (start/end/boss icons, selection highlight)
+ *  7. Draw annotation pins (on top of everything)
+ *  8. Restore transformation (Camera.restore)
  */
 
 const Renderer = (() => {
 
-  // Referências ao canvas e contexto 2D, definidas em init()
+  // References to canvas and 2D context, set in init()
   let _canvas = null;
   let _ctx    = null;
 
-  // Mapa atual armazenado para permitir re-renderização ao mover câmera
+  // Current map stored to allow re-rendering when moving the camera
   let _currentMap = null;
 
-  // Sala selecionada pelo clique do usuário (para highlight)
+  // Room selected by user click (for highlight)
   let _selectedRoom = null;
 
-  // Lista de pinos de anotação a renderizar — atualizada via setPins()
+  // List of annotation pins to render — updated via setPins()
   let _pins = [];
 
-  // Configurações visuais — ajuste para customizar a aparência
+  // Visual settings — adjust to customize appearance
   const CONFIG = {
-    corridorColor:   '#3a4acc',              // cor de preenchimento dos corredores
-    corridorWidth:   16,                     // espessura dos corredores em px
-    roomBorderColor: '#5c6bff',              // borda padrão das salas
-    roomBorderWidth: 2,                      // espessura da borda das salas em px
-    bgColor:         '#0e0f14',              // cor de fundo do canvas
-    gridColor:       'rgba(42, 45, 58, 0.6)', // cor dos pontos do grid de fundo
-    gridCellSize:    40,                     // tamanho de cada célula do grid em px
-    highlightColor:  'rgba(92, 107, 255, 0.4)', // cor do highlight ao selecionar sala
+    corridorColor:   '#3a4acc',              // corridor fill color
+    corridorWidth:   16,                     // corridor thickness in px
+    roomBorderColor: '#5c6bff',              // default room border
+    roomBorderWidth: 2,                      // room border thickness in px
+    bgColor:         '#0e0f14',              // canvas background color
+    gridColor:       'rgba(42, 45, 58, 0.6)', // background grid dot color
+    gridCellSize:    40,                     // grid cell size in px
+    highlightColor:  'rgba(92, 107, 255, 0.4)', // highlight color when selecting a room
 
-    // Cores de borda por tipo de sala — usadas mesmo sem PNG
+    // Border colors by room type — used even without PNG
     roomColors: {
-      start:  '#00ff88',  // verde para sala inicial
-      end:    '#ff6b6b',  // vermelho para sala final
-      boss:   '#ffaa00',  // laranja para sala do boss
-      normal: '#2a2d3a',  // cinza escuro para salas normais
+      start:  '#00ff88',  // green for start room
+      end:    '#ff6b6b',  // red for end room
+      boss:   '#ffaa00',  // orange for boss room
+      normal: '#2a2d3a',  // dark gray for normal rooms
     },
 
-    // Tamanho dos ícones de texto desenhados sobre salas especiais
+    // Size of text icons drawn over special rooms
     overlayFontSize: 18,
   };
 
   // ---------------------------------------------------
   // init(canvas, ctx)
-  // Configura o renderer com as referências do canvas e contexto.
-  // Deve ser chamada uma vez antes de qualquer draw().
+  // Sets up the renderer with canvas and context references.
+  // Must be called once before any draw().
   //
   // @param {HTMLCanvasElement}        canvas
   // @param {CanvasRenderingContext2D} ctx
   // ---------------------------------------------------
   function init(canvas, ctx) {
-    // Armazena as referências para uso em todos os métodos de desenho
+    // Store references for use in all drawing methods
     _canvas = canvas;
     _ctx    = ctx;
 
-    // Ajusta o canvas para preencher seu contêiner na inicialização
+    // Resize the canvas to fill its container on initialization
     _resizeToContainer();
   }
 
   // ---------------------------------------------------
   // draw(map)
-  // Redesenha o mapa completo do zero seguindo a ordem do painter's algorithm.
-  // Salva o mapa atual para permitir re-renderizações ao mover a câmera.
+  // Redraws the entire map from scratch following painter's algorithm order.
+  // Saves the current map to allow re-renders when moving the camera.
   //
-  // @param {object} map  objeto retornado por MapGenerator.generate()
-  //                      Pode ser null para apenas limpar o canvas.
+  // @param {object} map  object returned by MapGenerator.generate()
+  //                      Can be null to just clear the canvas.
   // ---------------------------------------------------
   function draw(map) {
-    // Armazena o mapa para permitir redesenho sem precisar receber novamente
+    // Store the map to allow redrawing without receiving it again
     if (map !== undefined) _currentMap = map;
 
-    // Passo 1: Limpa o canvas com a cor de fundo
+    // Step 1: Clear the canvas with the background color
     _clear();
 
-    // Sem mapa, apenas mostra o fundo limpo
+    // Without a map, just show the clean background
     if (!_currentMap) return;
 
-    // Passo 2: Aplica as transformações da câmera (pan + zoom)
+    // Step 2: Apply camera transformations (pan + zoom)
     Camera.apply(_ctx);
 
-    // Passo 3: Desenha o grid de fundo para dar sensação de espaço
+    // Step 3: Draw the background grid for a sense of space
     _drawBackground();
 
-    // Passo 4: Desenha os corredores abaixo das salas
+    // Step 4: Draw corridors below rooms
     _drawCorridors(_currentMap.corridors);
 
-    // Passo 5: Desenha as salas com seus PNGs (ou fallback colorido)
+    // Step 5: Draw rooms with their PNGs (or colored fallback)
     _drawRooms(_currentMap.rooms);
 
-    // Passo 6: Desenha ícones e highlights sobre salas especiais/selecionadas
+    // Step 6: Draw icons and highlights over special/selected rooms
     _drawOverlays(_currentMap.rooms);
 
-    // Passo 7: Desenha os pinos de anotação acima de tudo (incluindo salas)
+    // Step 7: Draw annotation pins on top of everything (including rooms)
     _drawPins();
 
-    // Passo 8: Restaura a transformação original do contexto
+    // Step 8: Restore the original context transformation
     Camera.restore(_ctx);
   }
 
   // ---------------------------------------------------
   // redraw()
-  // Re-renderiza o mapa atual sem receber novo mapa.
-  // Chamada pela câmera ao mover ou fazer zoom.
+  // Re-renders the current map without receiving a new one.
+  // Called by the camera when panning or zooming.
   // ---------------------------------------------------
   function redraw() {
     draw();
@@ -124,33 +124,33 @@ const Renderer = (() => {
 
   // ---------------------------------------------------
   // _clear()
-  // Limpa todo o canvas e preenche com a cor de fundo.
-  // Usa as dimensões reais do canvas (não afetadas pela câmera).
+  // Clears the entire canvas and fills it with the background color.
+  // Uses the actual canvas dimensions (not affected by the camera).
   // ---------------------------------------------------
   function _clear() {
-    // Limpa todos os pixels do canvas
+    // Clear all canvas pixels
     _ctx.clearRect(0, 0, _canvas.width, _canvas.height);
 
-    // Preenche com a cor de fundo definida no CONFIG
+    // Fill with the background color defined in CONFIG
     _ctx.fillStyle = CONFIG.bgColor;
     _ctx.fillRect(0, 0, _canvas.width, _canvas.height);
   }
 
   // ---------------------------------------------------
   // _drawBackground()
-  // Desenha um grid de pontos na área do mapa para dar
-  // sensação de espaço e profundidade ao usuário.
-  // O grid é desenhado no espaço de coordenadas do mapa.
+  // Draws a dot grid over the map area to give the user
+  // a sense of space and depth.
+  // The grid is drawn in the map coordinate space.
   // ---------------------------------------------------
   function _drawBackground() {
     const { gridCellSize, gridColor } = CONFIG;
 
     _ctx.fillStyle = gridColor;
 
-    // Itera por todas as posições do grid dentro da área do mapa
+    // Iterate through all grid positions within the map area
     for (let x = 0; x <= _currentMap.width; x += gridCellSize) {
       for (let y = 0; y <= _currentMap.height; y += gridCellSize) {
-        // Desenha um pequeno ponto em cada interseção do grid
+        // Draw a small dot at each grid intersection
         _ctx.beginPath();
         _ctx.arc(x, y, 1, 0, Math.PI * 2);
         _ctx.fill();
@@ -160,9 +160,9 @@ const Renderer = (() => {
 
   // ---------------------------------------------------
   // _drawCorridors(corridors)
-  // Desenha todos os corredores como segmentos retangulares.
-  // Cada corredor em L é desenhado como dois retângulos
-  // conectados no ponto de cotovelo.
+  // Draws all corridors as rectangular segments.
+  // Each L-shaped corridor is drawn as two rectangles
+  // connected at the elbow point.
   //
   // @param {Corridor[]} corridors
   // ---------------------------------------------------
@@ -176,13 +176,13 @@ const Renderer = (() => {
       const pts = corridor.points;
       if (!pts || pts.length < 2) return;
 
-      // Itera nos segmentos do corredor (do ponto i ao ponto i+1)
+      // Iterate through corridor segments (from point i to point i+1)
       for (let i = 0; i < pts.length - 1; i++) {
         const from = pts[i];
         const to   = pts[i + 1];
 
-        // Determina os limites do retângulo para o segmento atual
-        // Garante que x1 < x2 e y1 < y2 usando Math.min/max
+        // Determine the rectangle bounds for the current segment
+        // Ensure x1 < x2 and y1 < y2 using Math.min/max
         const x1 = Math.min(from.x, to.x) - halfWidth;
         const y1 = Math.min(from.y, to.y) - halfWidth;
         const w  = Math.abs(to.x - from.x) + CONFIG.corridorWidth;
@@ -195,46 +195,46 @@ const Renderer = (() => {
 
   // ---------------------------------------------------
   // _drawRooms(rooms)
-  // Desenha cada sala com seu PNG correspondente.
-  // Se a imagem não estiver disponível, usa um retângulo
-  // colorido como fallback para garantir que o mapa seja
-  // sempre visível mesmo sem assets.
+  // Draws each room with its corresponding PNG.
+  // If the image is not available, uses a colored
+  // rectangle as fallback to ensure the map is always
+  // visible even without assets.
   //
-  // Prioridade de imagem por sala:
-  //  1. room.userAsset.img  → imagem carregada pelo usuário
-  //  2. AssetLoader.get(room.assetKey) → PNG estático do manifesto
-  //  3. CONFIG.roomColors[room.type]   → retângulo colorido (fallback final)
+  // Image priority per room:
+  //  1. room.userAsset.img  → user-uploaded image
+  //  2. AssetLoader.get(room.assetKey) → static PNG from manifest
+  //  3. CONFIG.roomColors[room.type]   → colored rectangle (final fallback)
   //
   // @param {Room[]} rooms
   // ---------------------------------------------------
   function _drawRooms(rooms) {
     rooms.forEach(room => {
-      // Determina qual imagem usar seguindo a cadeia de prioridade:
-      // user asset → asset estático → null (retângulo colorido)
+      // Determine which image to use following the priority chain:
+      // user asset → static asset → null (colored rectangle)
       const img = (room.userAsset && room.userAsset.img)
         ? room.userAsset.img
         : (room.assetKey ? AssetLoader.get(room.assetKey) : null);
 
       if (img) {
-        // Renderiza o PNG estendido para cobrir toda a sala
+        // Render the PNG stretched to cover the entire room
         _ctx.drawImage(img, room.x, room.y, room.width, room.height);
       } else {
-        // Fallback: retângulo preenchido com cor baseada no tipo da sala
+        // Fallback: filled rectangle with color based on room type
         _ctx.fillStyle = CONFIG.roomColors[room.type] || CONFIG.roomColors.normal;
         _ctx.fillRect(room.x, room.y, room.width, room.height);
       }
 
-      // Desenha a borda da sala com cor e espessura do CONFIG
+      // Draw the room border with color and thickness from CONFIG
       _ctx.strokeStyle = CONFIG.roomBorderColor;
       _ctx.lineWidth   = CONFIG.roomBorderWidth;
       _ctx.strokeRect(room.x, room.y, room.width, room.height);
 
-      // Destaca a sala selecionada com overlay semi-transparente
+      // Highlight the selected room with a semi-transparent overlay
       if (_selectedRoom && _selectedRoom.id === room.id) {
         _ctx.fillStyle = CONFIG.highlightColor;
         _ctx.fillRect(room.x, room.y, room.width, room.height);
 
-        // Borda mais espessa na sala selecionada para destaque visual
+        // Thicker border on the selected room for visual emphasis
         _ctx.strokeStyle = '#ffffff';
         _ctx.lineWidth   = 3;
         _ctx.strokeRect(room.x, room.y, room.width, room.height);
@@ -244,24 +244,24 @@ const Renderer = (() => {
 
   // ---------------------------------------------------
   // _drawOverlays(rooms)
-  // Desenha ícones de texto sobre salas especiais para
-  // identificá-las visualmente no mapa.
+  // Draws text icons over special rooms to visually
+  // identify them on the map.
   //
-  //  - start → ícone PNG 'icon_start' ou emoji ▶
-  //  - end   → ícone PNG 'icon_boss'  ou emoji ★ (objetivo final)
-  //  - boss  → ícone PNG 'icon_boss'  ou emoji ☠
+  //  - start → PNG icon 'icon_start' or emoji ▶
+  //  - end   → PNG icon 'icon_boss'  or emoji ★ (final objective)
+  //  - boss  → PNG icon 'icon_boss'  or emoji ☠
   //
   // @param {Room[]} rooms
   // ---------------------------------------------------
   function _drawOverlays(rooms) {
-    // Mapa de emojis fallback por tipo de sala
+    // Fallback emoji map by room type
     const fallbackIcons = {
       start: '▶',
       end:   '★',
       boss:  '☠',
     };
 
-    // Mapa de chaves de ícones por tipo de sala
+    // Icon key map by room type
     const iconKeys = {
       start: 'icon_start',
       end:   'icon_boss',
@@ -269,38 +269,38 @@ const Renderer = (() => {
     };
 
     rooms.forEach(room => {
-      // Pula salas normais sem ícone
+      // Skip normal rooms without icons
       if (room.type === 'normal') return;
 
-      // Centro da sala — onde o ícone será posicionado
+      // Room center — where the icon will be positioned
       const cx = room.x + room.width  / 2;
       const cy = room.y + room.height / 2;
 
-      // Tenta usar o PNG do ícone se disponível
+      // Try to use the PNG icon if available
       const iconKey = iconKeys[room.type];
       const iconImg = iconKey ? AssetLoader.get(iconKey) : null;
 
       if (iconImg) {
-        // Tamanho do ícone: 40% da menor dimensão da sala
+        // Icon size: 40% of the room's smallest dimension
         const iconSize = Math.min(room.width, room.height) * 0.4;
         _ctx.drawImage(iconImg, cx - iconSize / 2, cy - iconSize / 2, iconSize, iconSize);
       } else {
-        // Fallback: emoji/texto centralizado sobre a sala
+        // Fallback: emoji/text centered over the room
         _ctx.font      = `bold ${CONFIG.overlayFontSize}px monospace`;
         _ctx.textAlign = 'center';
         _ctx.textBaseline = 'middle';
 
-        // Sombra para melhorar legibilidade sobre imagens
+        // Shadow to improve readability over images
         _ctx.shadowColor   = '#000000';
         _ctx.shadowBlur    = 4;
         _ctx.fillStyle     = '#ffffff';
         _ctx.fillText(fallbackIcons[room.type] || '?', cx, cy);
 
-        // Reseta a sombra para não afetar outros desenhos
+        // Reset shadow so it doesn't affect other drawings
         _ctx.shadowBlur = 0;
       }
 
-      // Desenha o nome do tipo da sala abaixo do ícone
+      // Draw the room type name below the icon
       _ctx.font         = `10px monospace`;
       _ctx.textAlign    = 'center';
       _ctx.textBaseline = 'top';
@@ -314,57 +314,57 @@ const Renderer = (() => {
 
   // ---------------------------------------------------
   // setPins(pins)
-  // Atualiza a lista de pinos de anotação que será
-  // desenhada sobre o mapa.  Chamada pelo main.js toda
-  // vez que o PinManager notifica uma mudança.
+  // Updates the list of annotation pins that will be
+  // drawn over the map. Called by main.js every time
+  // the PinManager notifies a change.
   //
   // @param {Array<{id, x, y, label, note}>} pins
   // ---------------------------------------------------
   function setPins(pins) {
-    // Preserva a referência ao array: os objetos dentro são compartilhados
-    // com o PinManager, então updateSilent() refletirá nos rótulos imediatamente.
+    // Preserve the reference to the array: the objects inside are shared
+    // with the PinManager, so updateSilent() will reflect on labels immediately.
     _pins = pins;
   }
 
   // ---------------------------------------------------
   // _drawPins()
-  // Desenha todos os pinos como marcadores "alfinete de mapa":
+  // Draws all pins as "map pin" markers:
   //
-  //   ○   ← círculo preenchido accent (centro em pin.y - 12)
-  //   ▾   ← triângulo apontando para baixo até a ponta (pin.y)
-  //   label acima do círculo
+  //   ○   ← filled accent circle (center at pin.y - 12)
+  //   ▾   ← downward-pointing triangle to the tip (pin.y)
+  //   label above the circle
   //
-  // Renderizado no espaço de coordenadas do mundo (após Camera.apply).
+  // Rendered in world coordinate space (after Camera.apply).
   // ---------------------------------------------------
   function _drawPins() {
     if (!_pins || _pins.length === 0) return;
 
-    const PIN_COLOR       = '#5c6bff';   // accent color (pino pendente)
-    const PIN_COLOR_DONE  = '#00cc66';   // verde (pino concluído)
-    const PIN_OUTLINE     = '#ffffff';   // halo branco para contraste
-    const CIRCLE_R        = 7;           // raio do círculo do pino
-    const CIRCLE_CY       = 12;         // distância do círculo ao centróide Y
+    const PIN_COLOR       = '#5c6bff';   // accent color (pending pin)
+    const PIN_COLOR_DONE  = '#00cc66';   // green (completed pin)
+    const PIN_OUTLINE     = '#ffffff';   // white halo for contrast
+    const CIRCLE_R        = 7;           // pin circle radius
+    const CIRCLE_CY       = 12;         // distance from circle to centroid Y
 
     _pins.forEach(pin => {
-      const cx = pin.x;              // centro X do círculo
-      const cy = pin.y - CIRCLE_CY;  // centro Y do círculo
+      const cx = pin.x;              // circle center X
+      const cy = pin.y - CIRCLE_CY;  // circle center Y
 
-      // Determina a cor com base no estado de conclusão
+      // Determine color based on completion state
       const color = pin.completed ? PIN_COLOR_DONE : PIN_COLOR;
 
-      // ── Halo branco: anel externo para realçar sobre fundos escuros
+      // -- White halo: outer ring to stand out over dark backgrounds
       _ctx.beginPath();
       _ctx.arc(cx, cy, CIRCLE_R + 2, 0, Math.PI * 2);
       _ctx.fillStyle = PIN_OUTLINE;
       _ctx.fill();
 
-      // ── Corpo do pino: círculo preenchido
+      // -- Pin body: filled circle
       _ctx.beginPath();
       _ctx.arc(cx, cy, CIRCLE_R, 0, Math.PI * 2);
       _ctx.fillStyle = color;
       _ctx.fill();
 
-      // ── Agulha: triângulo apontando para baixo, de cy+CIRCLE_R até pin.y
+      // -- Needle: downward-pointing triangle, from cy+CIRCLE_R to pin.y
       _ctx.beginPath();
       _ctx.moveTo(cx - 4, cy + CIRCLE_R - 1);
       _ctx.lineTo(cx + 4, cy + CIRCLE_R - 1);
@@ -373,7 +373,7 @@ const Renderer = (() => {
       _ctx.fillStyle = color;
       _ctx.fill();
 
-      // ── Ícone de check (✓) dentro do pino concluído
+      // -- Check icon (✓) inside the completed pin
       if (pin.completed) {
         _ctx.font         = 'bold 9px monospace';
         _ctx.textAlign    = 'center';
@@ -382,13 +382,13 @@ const Renderer = (() => {
         _ctx.fillText('✓', cx, cy);
       }
 
-      // ── Rótulo do pino: texto acima do halo
+      // -- Pin label: text above the halo
       if (pin.label) {
         _ctx.font         = 'bold 9px monospace';
         _ctx.textAlign    = 'center';
         _ctx.textBaseline = 'bottom';
 
-        // Sombra preta para legibilidade em qualquer fundo
+        // Black shadow for readability on any background
         _ctx.shadowColor = '#000000';
         _ctx.shadowBlur  = 3;
         _ctx.fillStyle   = pin.completed ? '#00cc66' : '#ffffff';
@@ -397,53 +397,53 @@ const Renderer = (() => {
       }
     });
 
-    // Reseta alinhamentos de texto para não afetar outros métodos
+    // Reset text alignments so they don't affect other methods
     _ctx.textAlign    = 'left';
     _ctx.textBaseline = 'alphabetic';
   }
 
   // ---------------------------------------------------
   // highlightRoom(room)
-  // Define a sala selecionada e redesenha o mapa com
-  // o highlight ativo. Null remove o highlight.
+  // Sets the selected room and redraws the map with
+  // the highlight active. Null removes the highlight.
   //
-  // @param {Room | null} room  sala a destacar, ou null para limpar
+  // @param {Room | null} room  room to highlight, or null to clear
   // ---------------------------------------------------
   function highlightRoom(room) {
-    // Atualiza a referência da sala selecionada
+    // Update the selected room reference
     _selectedRoom = room;
 
-    // Redesenha todo o mapa para aplicar o novo estado de highlight
+    // Redraw the entire map to apply the new highlight state
     draw();
   }
 
   // ---------------------------------------------------
   // resizeCanvas()
-  // Ajusta as dimensões do canvas para preencher o contêiner.
-  // Deve ser chamada ao redimensionar a janela.
+  // Adjusts canvas dimensions to fill its container.
+  // Should be called when the window is resized.
   // ---------------------------------------------------
   function resizeCanvas() {
     _resizeToContainer();
-    draw(); // redesenha após o resize para evitar canvas em branco
+    draw(); // redraw after resize to avoid a blank canvas
   }
 
   // ---------------------------------------------------
   // _resizeToContainer()
-  // Ajusta width/height do canvas ao tamanho do elemento pai (#canvas-wrapper).
+  // Adjusts canvas width/height to the size of the parent element (#canvas-wrapper).
   // ---------------------------------------------------
   function _resizeToContainer() {
     if (!_canvas) return;
 
     const wrapper = _canvas.parentElement;
     if (wrapper) {
-      // Define as dimensões reais de pixel do canvas
+      // Set the actual pixel dimensions of the canvas
       _canvas.width  = wrapper.clientWidth;
       _canvas.height = wrapper.clientHeight;
     }
   }
 
   // ---------------------------------------------------
-  // API pública
+  // Public API
   // ---------------------------------------------------
   return { init, draw, redraw, setPins, highlightRoom, resizeCanvas };
 

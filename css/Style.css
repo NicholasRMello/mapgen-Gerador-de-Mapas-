@@ -1,6 +1,6 @@
 /* ==============================================
-   VARIÁVEIS GLOBAIS — tema e paleta
-   Edite aqui para mudar o visual do projeto
+   GLOBAL VARIABLES — theme and palette
+   Edit here to change the project's visual style
    ============================================= */
 :root {
   --color-bg:         #0e0f14;
@@ -15,11 +15,11 @@
   --header-height: 64px;
   --sidebar-width: 200px;
   --radius:        8px;
-  --font-main:     'Courier New', monospace; /* troque pelo que preferir */
+  --font-main:     'Courier New', monospace; /* change to your preferred font */
 }
 
 /* ==============================================
-   RESET BÁSICO
+   BASIC RESET
    ============================================= */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -50,7 +50,7 @@ body {
   padding: 0 24px;
   flex-shrink: 0;
 
-  /* TODO: adicione efeito de glassmorphism se quiser */
+  /* TODO: add glassmorphism effect if desired */
 }
 
 .header-logo {
@@ -70,7 +70,7 @@ body {
   font-size: 1.6rem;
   color: var(--color-accent);
 
-  /* TODO: adicione animação de rotação ou pulse */
+  /* TODO: add rotation or pulse animation */
 }
 
 .header-controls {
@@ -92,7 +92,7 @@ body {
   letter-spacing: 1px;
   transition: background 0.2s, color 0.2s;
 
-  /* TODO: adicione efeito hover customizado */
+  /* TODO: add custom hover effect */
 }
 
 .header-controls button:hover {
@@ -110,7 +110,7 @@ body {
   font-family: var(--font-main);
   font-size: 0.85rem;
 
-  /* TODO: adicione focus ring estilizado */
+  /* TODO: add styled focus ring */
 }
 
 .header-status {
@@ -120,7 +120,7 @@ body {
 }
 
 /* ==============================================
-   LAYOUT PRINCIPAL
+   MAIN LAYOUT
    ============================================= */
 #app-main {
   display: flex;
@@ -172,7 +172,7 @@ body {
   gap: 6px;
 }
 
-/* Cada slot de asset — receberá uma <img> dentro */
+/* Each asset slot — will contain an <img> inside */
 .asset-slot {
   background: var(--color-bg);
   border: 1px solid var(--color-border);
@@ -185,14 +185,14 @@ body {
   cursor: pointer;
   transition: border-color 0.2s;
 
-  /* TODO: adicione efeito de seleção (selected state) */
+  /* TODO: add selection effect (selected state) */
 }
 
 .asset-slot img {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  image-rendering: pixelated; /* importante para pixel art! */
+  image-rendering: pixelated; /* important for pixel art! */
 }
 
 .asset-slot:hover {
@@ -213,7 +213,7 @@ body {
   overflow: hidden;
   background: var(--color-bg);
 
-  /* TODO: adicione grid de fundo (pattern SVG ou CSS) para guiar o olho */
+  /* TODO: add background grid (SVG or CSS pattern) to guide the eye */
 }
 
 #map-canvas {
@@ -221,10 +221,10 @@ body {
   width: 100%;
   height: 100%;
 
-  /* TODO: adicione cursor crosshair ou grab ao mover a câmera */
+  /* TODO: add crosshair or grab cursor when moving the camera */
 }
 
-/* Overlay de loading */
+/* Loading overlay */
 #canvas-overlay {
   position: absolute;
   inset: 0;
@@ -242,7 +242,7 @@ body {
 }
 
 /* ==============================================
-   PAINEL DE INFO / DEBUG
+   INFO / DEBUG PANEL
    ============================================= */
 #room-details p {
   font-size: 0.78rem;
@@ -250,7 +250,7 @@ body {
   line-height: 1.6;
 }
 
-/* Tabela de propriedades da sala selecionada */
+/* Property table for the selected room */
 #room-details table {
   width: 100%;
   font-size: 0.75rem;
@@ -270,9 +270,9 @@ body {
   white-space: nowrap;
 }
 
-/* Label de texto abaixo de cada miniatura de asset */
+/* Text label below each asset thumbnail */
 .asset-slot span {
-  display: none; /* esconde o label: pouco espaço na sidebar */
+  display: none; /* hides the label: not enough space in the sidebar */
 }
 
 #debug-panel h3 {
@@ -290,7 +290,7 @@ body {
   word-break: break-all;
   line-height: 1.5;
 
-  /* TODO: adicione scroll interno se o output crescer muito */
+  /* TODO: add internal scroll if the output grows too large */
 }
 
 hr {
@@ -299,7 +299,7 @@ hr {
 }
 
 /* ==============================================
-   SCROLLBAR CUSTOMIZADA (WebKit)
+   CUSTOM SCROLLBAR (WebKit)
    ============================================= */
 ::-webkit-scrollbar {
   width: 6px;
@@ -313,10 +313,10 @@ hr {
 }
 
 /* ==============================================
-   DROP ZONE — área de upload de imagens do usuário
+   DROP ZONE — user image upload area
    ============================================= */
 
-/* Contêiner principal do drop zone na sidebar esquerda */
+/* Main container for the drop zone in the left sidebar */
 #drop-zone {
   display: flex;
   flex-direction: column;
@@ -324,7 +324,7 @@ hr {
   justify-content: center;
   gap: 6px;
 
-  /* Borda tracejada indica área interativa */
+  /* Dashed border indicates interactive area */
   border: 2px dashed var(--color-border);
   border-radius: var(--radius);
   padding: 18px 10px;
@@ -336,14 +336,14 @@ hr {
   color: var(--color-muted);
   line-height: 1.5;
 
-  /* Transição suave ao passar o mouse ou arrastar arquivo */
+  /* Smooth transition on mouse hover or file drag */
   transition: border-color 0.2s, background 0.2s, color 0.2s;
 
-  /* Evita que o texto seja selecionado durante o drag */
+  /* Prevents text selection during drag */
   user-select: none;
 }
 
-/* Ícone "+" grande centralizado no drop zone */
+/* Large "+" icon centered in the drop zone */
 #drop-zone .drop-icon {
   font-size: 1.8rem;
   line-height: 1;
@@ -352,7 +352,7 @@ hr {
   transition: opacity 0.2s;
 }
 
-/* Hover com mouse (sem arrastar) */
+/* Mouse hover (without dragging) */
 #drop-zone:hover {
   border-color: var(--color-accent);
   color: var(--color-text);
@@ -362,7 +362,7 @@ hr {
   opacity: 1;
 }
 
-/* Estado ativo: arquivo está sendo arrastado sobre o drop zone */
+/* Active state: file is being dragged over the drop zone */
 #drop-zone.drag-over {
   border-color: var(--color-accent);
   border-style: solid;
@@ -375,22 +375,22 @@ hr {
 }
 
 /* ==============================================
-   USER ASSET LIST — lista de imagens carregadas
+   USER ASSET LIST — uploaded images list
    ============================================= */
 
-/* Contêiner da lista de cards de imagem */
+/* Container for the image card list */
 #user-asset-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 
-  /* Scroll para listas longas */
+  /* Scroll for long lists */
   overflow-y: auto;
   max-height: calc(100vh - 220px);
 }
 
-/* Card individual de cada imagem carregada */
-/* Contém: miniatura | coluna com nome + tipo | botão remover */
+/* Individual card for each uploaded image */
+/* Contains: thumbnail | column with name + type | remove button */
 .ua-card {
   display: flex;
   align-items: center;
@@ -401,7 +401,7 @@ hr {
   border-radius: var(--radius);
   padding: 6px;
 
-  /* Transição ao hover para destacar o card */
+  /* Hover transition to highlight the card */
   transition: border-color 0.15s;
 }
 
@@ -409,28 +409,28 @@ hr {
   border-color: var(--color-accent-dim);
 }
 
-/* Miniatura da imagem dentro do card */
+/* Image thumbnail inside the card */
 .ua-card-thumb {
   width: 40px;
   height: 40px;
   object-fit: cover;
   border-radius: 4px;
-  flex-shrink: 0;      /* não comprime a miniatura */
+  flex-shrink: 0;      /* does not compress the thumbnail */
 
-  /* Renderização pixelada para pixel art */
+  /* Pixelated rendering for pixel art */
   image-rendering: pixelated;
 }
 
-/* Coluna com nome do arquivo e seletor de tipo */
+/* Column with file name and type selector */
 .ua-card-info {
   display: flex;
   flex-direction: column;
   gap: 4px;
   flex: 1;
-  min-width: 0;        /* permite truncar o texto no flex */
+  min-width: 0;        /* allows text truncation in flex */
 }
 
-/* Nome do arquivo — truncado se for longo demais */
+/* File name — truncated if too long */
 .ua-card-name {
   font-size: 0.68rem;
   color: var(--color-text);
@@ -439,7 +439,7 @@ hr {
   text-overflow: ellipsis;
 }
 
-/* Seletor de tipo da sala para esta imagem */
+/* Room type selector for this image */
 .ua-type-select {
   font-family: var(--font-main);
   font-size: 0.65rem;
@@ -450,7 +450,7 @@ hr {
   border-radius: 4px;
   padding: 2px 4px;
 
-  /* Remove a seta padrão do SO — usamos a aparência customizada */
+  /* Removes the default OS arrow — using custom appearance */
   appearance: none;
   -webkit-appearance: none;
   cursor: pointer;
@@ -463,7 +463,7 @@ hr {
   border-color: var(--color-accent);
 }
 
-/* Botão de remover (✕) no canto direito do card */
+/* Remove button (x) on the right side of the card */
 .ua-remove {
   flex-shrink: 0;
   background: transparent;
@@ -482,7 +482,7 @@ hr {
   background: rgba(255, 79, 107, 0.1);
 }
 
-/* Mensagem exibida quando não há assets carregados */
+/* Message displayed when no assets are loaded */
 .ua-empty-hint {
   font-size: 0.7rem;
   color: var(--color-muted);
@@ -492,15 +492,15 @@ hr {
 }
 
 /* ==============================================
-   SIDEBAR SECTIONS — accordion vertical (submenus)
+   SIDEBAR SECTIONS — vertical accordion (submenus)
    ============================================= */
 
-/* Contêiner de cada seção retrátil */
+/* Container for each collapsible section */
 .sidebar-section {
   border-bottom: 1px solid var(--color-border);
 }
 
-/* Botão-cabeçalho que colapsa/expande a seção */
+/* Header button that collapses/expands the section */
 .sidebar-section-header {
   width: 100%;
   padding: 10px 4px;
@@ -519,7 +519,7 @@ hr {
   gap: 6px;
 }
 
-/* Seção expandida / ativa */
+/* Expanded / active section */
 .sidebar-section-header.active {
   color: var(--color-accent);
 }
@@ -529,14 +529,14 @@ hr {
   background: rgba(92, 107, 255, 0.05);
 }
 
-/* Seta indicadora de estado (▶ / ▼) */
+/* State indicator arrow (> / v) */
 .section-arrow {
   font-size: 0.55rem;
   display: inline-block;
   transition: transform 0.2s;
 }
 
-/* Conteúdo da seção (drop-zone, listas, etc.) */
+/* Section content (drop-zone, lists, etc.) */
 .sidebar-section-content {
   display: flex;
   flex-direction: column;
@@ -544,13 +544,13 @@ hr {
   padding: 0 0 10px 0;
 }
 
-/* Conteúdo colapsado — escondido */
+/* Collapsed content — hidden */
 .sidebar-section-content.collapsed {
   display: none;
 }
 
 /* ==============================================
-   BOTÃO DE MODO PINO — toggle para inserir pinos
+   PIN MODE BUTTON — toggle for inserting pins
    ============================================= */
 
 #btn-pin-mode {
@@ -567,7 +567,7 @@ hr {
   transition: background 0.2s, color 0.2s, border-style 0.2s;
 }
 
-/* Estado ativo: modo pino ligado */
+/* Active state: pin mode enabled */
 #btn-pin-mode.active {
   background: var(--color-accent);
   border-style: solid;
@@ -579,10 +579,10 @@ hr {
 }
 
 /* ==============================================
-   PIN LIST — lista de pinos na sidebar
+   PIN LIST — pin list in the sidebar
    ============================================= */
 
-/* Contêiner que lista os cards de pinos */
+/* Container that lists the pin cards */
 #pin-list {
   display: flex;
   flex-direction: column;
@@ -591,7 +591,7 @@ hr {
   max-height: calc(100vh - 200px);
 }
 
-/* Card individual de cada pino */
+/* Individual card for each pin */
 .pin-card {
   display: flex;
   flex-direction: column;
@@ -607,13 +607,13 @@ hr {
   border-color: var(--color-accent-dim);
 }
 
-/* Destaque temporário quando o usuário clica no pino no canvas */
+/* Temporary highlight when the user clicks on the pin in the canvas */
 .pin-card.selected {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 2px var(--color-accent-dim);
 }
 
-/* Pino marcado como concluído — borda e indicador verdes */
+/* Pin marked as completed — green border and indicator */
 .pin-card.completed {
   border-color: #00cc66;
 }
@@ -623,22 +623,22 @@ hr {
   color: #00cc66;
 }
 
-/* Linha superior: ícone + rótulo/input + botões de ação */
+/* Top row: icon + label/input + action buttons */
 .pin-card-header {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-/* Ícone do pino na header */
+/* Pin icon in the header */
 .pin-card-header > span {
   font-size: 0.85rem;
   flex-shrink: 0;
 }
 
-/* ── MODO VISUALIZAÇÃO ── */
+/* -- VIEW MODE -- */
 
-/* Rótulo do pino em texto (somente leitura) */
+/* Pin label in text (read-only) */
 .pin-label-text {
   flex: 1;
   min-width: 0;
@@ -650,7 +650,7 @@ hr {
   text-overflow: ellipsis;
 }
 
-/* Texto da anotação (somente leitura) */
+/* Annotation text (read-only) */
 .pin-note-preview {
   font-size: 0.68rem;
   color: var(--color-muted);
@@ -662,7 +662,7 @@ hr {
   overflow-y: auto;
 }
 
-/* Botão editar (✏️) */
+/* Edit button */
 .pin-edit-btn {
   flex-shrink: 0;
   background: transparent;
@@ -678,7 +678,7 @@ hr {
   background: rgba(92, 107, 255, 0.15);
 }
 
-/* Botão excluir / lixeira (🗑️) no modo visualização */
+/* Delete / trash button in view mode */
 .pin-trash-btn {
   flex-shrink: 0;
   background: transparent;
@@ -694,9 +694,9 @@ hr {
   background: rgba(255, 79, 107, 0.15);
 }
 
-/* ── MODO EDIÇÃO ── */
+/* -- EDIT MODE -- */
 
-/* Input editável do rótulo do pino */
+/* Editable input for the pin label */
 .pin-label-input {
   flex: 1;
   min-width: 0;
@@ -715,7 +715,7 @@ hr {
   border-bottom-color: var(--color-accent);
 }
 
-/* Textarea para a nota/anotação do pino (editável) */
+/* Textarea for the pin note/annotation (editable) */
 .pin-note-input {
   width: 100%;
   min-height: 48px;
@@ -737,7 +737,7 @@ hr {
   color: var(--color-text);
 }
 
-/* Botão confirmar edição (✓) — salva o texto */
+/* Confirm edit button — saves the text */
 .pin-confirm-btn {
   flex-shrink: 0;
   background: transparent;
@@ -755,7 +755,7 @@ hr {
   background: rgba(0, 204, 102, 0.15);
 }
 
-/* Botão descartar edição (🗑️) — cancela alterações */
+/* Discard edit button — cancels changes */
 .pin-discard-btn {
   flex-shrink: 0;
   background: transparent;
@@ -771,7 +771,7 @@ hr {
   background: rgba(255, 79, 107, 0.15);
 }
 
-/* Botão de remover pino — antigo, mantido como fallback */
+/* Remove pin button — legacy, kept as fallback */
 .pin-delete {
   flex-shrink: 0;
   background: transparent;
@@ -789,7 +789,7 @@ hr {
   background: rgba(255, 79, 107, 0.1);
 }
 
-/* Botão de status no painel de detalhes da direita */
+/* Status button in the right details panel */
 .pin-status-btn {
   margin-top: 8px;
   padding: 6px 12px;
@@ -809,7 +809,7 @@ hr {
   color: #fff;
 }
 
-/* Quando o pino já está concluído, o botão exibe em verde */
+/* When the pin is already completed, the button displays in green */
 .pin-status-btn.completed {
   border-color: #00cc66;
   color: #00cc66;
@@ -820,7 +820,7 @@ hr {
   color: #fff;
 }
 
-/* Mensagem exibida quando não há pinos */
+/* Message displayed when there are no pins */
 .pin-empty-hint {
   font-size: 0.7rem;
   color: var(--color-muted);
@@ -830,20 +830,20 @@ hr {
 }
 
 /* ==============================================
-   CURSOR PIN MODE — crosshair durante inserção
+   CURSOR PIN MODE — crosshair during insertion
    ============================================= */
 
-/* Quando o modo pino está ativo, o canvas exibe crosshair */
+/* When pin mode is active, the canvas displays crosshair */
 #map-canvas.pin-mode {
   cursor: crosshair;
 }
 
 /* ==============================================
-   MODAL DE PREVIEW DE IMAGEM
-   Exibido ao clicar em um thumbnail na sidebar
+   IMAGE PREVIEW MODAL
+   Displayed when clicking a thumbnail in the sidebar
    ============================================= */
 
-/* Overlay fullscreen — cobre toda a viewport */
+/* Fullscreen overlay — covers the entire viewport */
 #img-preview-modal {
   position: fixed;
   inset: 0;
@@ -853,12 +853,12 @@ hr {
   justify-content: center;
 }
 
-/* Estado oculto do modal */
+/* Hidden state of the modal */
 #img-preview-modal.hidden {
   display: none;
 }
 
-/* Fundo escuro semi-transparente que fecha o modal ao clicar */
+/* Dark semi-transparent background that closes the modal on click */
 #img-preview-backdrop {
   position: absolute;
   inset: 0;
@@ -866,7 +866,7 @@ hr {
   cursor: pointer;
 }
 
-/* Container da imagem — fica sobre o backdrop */
+/* Image container — sits above the backdrop */
 #img-preview-container {
   position: relative;
   z-index: 1001;
@@ -877,19 +877,19 @@ hr {
   justify-content: center;
 }
 
-/* Imagem ampliada */
+/* Enlarged image */
 #img-preview-img {
   max-width: 80vw;
   max-height: 80vh;
   object-fit: contain;
   border: 2px solid var(--color-accent);
   border-radius: var(--radius);
-  /* Preserva a aparência de pixel art */
+  /* Preserves the pixel art appearance */
   image-rendering: pixelated;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7);
 }
 
-/* Botão de fechar no canto superior direito */
+/* Close button in the top-right corner */
 #img-preview-close {
   position: absolute;
   top: -14px;
@@ -911,4 +911,28 @@ hr {
 #img-preview-close:hover {
   background: var(--color-accent);
   color: #fff;
+}
+
+/* ==============================================
+   LANGUAGE TOGGLE BUTTON
+   ============================================= */
+
+/* Language switch button in the header */
+#btn-lang {
+  padding: 6px 12px;
+  border: 1px solid var(--color-muted);
+  background: transparent;
+  color: var(--color-muted);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-main);
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  margin-left: auto;
+}
+
+#btn-lang:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
