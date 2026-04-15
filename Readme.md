@@ -1,6 +1,6 @@
 # MapGen — Procedural Map Generator
 
-A browser-based procedural dungeon map generator built with vanilla JavaScript and HTML5 Canvas 2D. Create random dungeon maps for tabletop RPGs, game design prototyping, or creative inspiration.
+A browser-based procedural dungeon map generator built with React + TypeScript and HTML5 Canvas 2D. Create random dungeon maps for tabletop RPGs, game design prototyping, or creative inspiration.
 
 ## Features
 
@@ -12,16 +12,39 @@ A browser-based procedural dungeon map generator built with vanilla JavaScript a
 - **Room details** — Click any room to see its properties (type, size, connections)
 - **Multilingual** — Toggle between English and Portuguese (PT-BR)
 
+## How to Run (Local)
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Start the development server:
+
+```bash
+npm run dev
+```
+
+3. Open the local URL shown in the terminal.
+
+## Build for Production
+
+```bash
+npm run build
+```
+
+The generated files will be in `dist/`.
+
 ## How to Use
 
-1. Open `index.html` in any modern browser (no server required)
-2. Optionally drag & drop images into the left sidebar to use as room textures
-3. Enter a seed or leave blank for a random one
-4. Choose map size (Small / Medium / Large) and click **Generate Map**
-5. Pan the map by dragging, zoom with the scroll wheel
-6. Click on rooms to see details in the right panel
-7. Use the **Add Pin** button to place annotation markers on corridors
-8. Toggle language with the **PT-BR / EN** button in the top bar
+1. Optionally drag and drop images into the left sidebar to use as room textures
+2. Enter a seed or leave blank for a random one
+3. Choose map size (Small / Medium / Large) and click **Generate Map**
+4. Pan the map by dragging, zoom with the scroll wheel
+5. Click on rooms to see details in the right panel
+6. Use the **Add Pin** button to place annotation markers on corridors
+7. Toggle language with the **PT-BR / EN** button in the top bar
 
 ## Live Demo
 
