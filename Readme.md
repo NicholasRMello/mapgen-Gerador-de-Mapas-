@@ -36,6 +36,19 @@ npm run build
 
 The generated files will be in `dist/`.
 
+## Automatic Deploy (GitHub Pages)
+
+This repository now includes a GitHub Actions workflow at `.github/workflows/deploy-pages.yml`.
+
+- Trigger: every push to `main` (and manual run via Actions tab)
+- Build: runs `npm ci` and `npm run build`
+- Deploy: publishes `dist/` to GitHub Pages
+
+One-time GitHub setup:
+
+1. Go to **Settings → Pages**
+2. In **Build and deployment**, set **Source** to **GitHub Actions**
+
 ## How to Use
 
 1. Optionally drag and drop images into the left sidebar to use as room textures
